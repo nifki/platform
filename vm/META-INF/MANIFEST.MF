@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Created-By: 0.1 (Nifki.net)
+Main-Class: org.sc3d.apt.crazon.vm.Main

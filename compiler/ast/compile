@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Compiles all files in this package.
+
+javac -g -deprecation -Xlint:unchecked -d ~/java/classes/ *.java 2>/tmp/err || less /tmp/err

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+export OUT=/home/apt1002/python/nifki/compiler.jar
+
+jar cvfm $OUT META-INF/MANIFEST.MF -C ~/java/classes/ org/sc3d/apt/crazon/compiler/ -C ~/java/classes/ org/sc3d/apt/sss/v3/
+
+chmod a+x $OUT

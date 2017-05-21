@@ -1,0 +1,29 @@
+FOR (=v) IN fish
+
+FOR (k=) IN fish
+
+FOR (k=v) IN fish
+
+
+
+FOR ,v IN fish
+
+FOR k, IN fish
+
+FOR k,v IN fish
+
+
+
+FOR =v IN fish
+
+FOR k= IN fish
+
+FOR k=v IN fish
+
+
+
+FOR (, v) IN fish
+
+FOR (k, ) IN fish
+
+FOR (k, v) IN fish

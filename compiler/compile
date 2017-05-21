@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Compiles all files in this package.
+
+javac -g -deprecation -d ~/java/classes/ *.java 2>/tmp/err || less /tmp/err
+
+cp grammar.sss ~/java/classes/org/sc3d/apt/crazon/compiler/

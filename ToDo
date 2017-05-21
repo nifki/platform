@@ -1,0 +1,77 @@
+Fire-fighting:
+
+Make GLOBAL optional for tables whose fields are being set.
+
+Add a "WAIT" at the end of all programs.
+
+Fix grammar comments. Lots of out-of-date-os.
+
+Debug focus problem.
+
+Allow assigning to characters of strings (making a copy).
+
+Race condition on closedown causes null pointer exception in paint(). Treat as
+fixed since platform was rewritten?
+
+Change the name of "Precedence" to something better.
+
+Fix corruption of TEMP in "RESIZE object TO (, (SPRITE picture RESIZE TO (x,
+y)).X)".
+
+Fix "ERROR" instruction in the assembler. Treat it as the end of a block.
+
+Stop the debug window eating up tens of megabytes of memory and causing lots of
+unsightly garbage collection.
+
+Make a test suite. Probably a source file and the expected Assembler output.
+Make sure we test for omitted optional things e.g. "RETURN" without an
+expression and named arguments without a default value.
+
+----
+
+Optimising and refactoring:
+
+Make Value.Str wrap an array of characters, not a Java String.
+
+Perhaps factor some of Program out into a separate class? Maybe a PageCache
+class?
+
+Perhaps move 'ASTNode.findGlobals()' into Page (the only place from which is is
+called) so it is more like the 'walkXXX()' methods in Program and Flattener?
+
+Currently we use 'null' to represent a page that was not found. Perhaps instead
+use 'new Page(name, null)'?
+
+Add a 'hasChanged' flag and suppress unnecessary screen updates.
+
+Catch 'gainedFocus' and 'lostFocus' events and use them to control whether the
+game is paused. When paused, display a "PAUSED" banner.
+
+Use more CrazonExceptions.
+
+----
+
+On-going development:
+
+Debugger implementation stuff -
+  New package called debugger containing at least:
+    class RecordingPlatform extends AbstractPlatform (wraps AbstractPlatform),
+    class InvisiblePlatform extends AbstractPlatform (no rendering, plays recorded key presses)
+    A cursor/finger impl. that allows scrolling back and fwd in a recording.
+  Something about a separate debugger and debugger UI.
+
+Improve error reporting. Most pressingly, carry around enough debugging
+information to use proper variable names in error messages.
+
+Give every sprite an "active point", initially (0, 0), which acts as (1) the
+point referenced by "MOVE TO" and (2) the centre of enlargement and rotation.
+
+----
+
+Changes after that:
+
+Slog away implementing the remaining instructions.
+
+Rename "Crazon" to "Nifki" *everywhere*, including the package name.
+
+Text, fonts, sound.

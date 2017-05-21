@@ -1,0 +1,43 @@
+Map = [   
+    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,1,0,0,1,0,0,0,3,1],
+    [1,0,1,0,1,1,0,0,0,1,0,1,1],
+    [1,0,0,1,0,0,0,1,1,1,0,0,1],
+    [1,0,1,0,1,0,1,0,0,0,1,0,1],
+    [1,1,0,0,1,1,1,0,1,0,1,0,1],
+    [1,0,0,1,0,0,0,0,1,0,1,0,1],
+    [1,1,1,0,1,0,1,1,0,0,1,0,1],
+    [1,0,0,0,1,0,0,1,0,1,1,0,1],
+    [1,0,1,0,0,1,0,1,0,0,0,0,1],
+    [1,2,0,1,0,0,0,1,0,1,0,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1]
+]
+
+Man = IMAGE("man.png")
+
+BSprites = [
+  "blank.png",
+  "wall.png",
+  "exit.png"
+]
+
+FOR y=row IN Map {
+  FOR x=cell IN row {
+    MOVE IMAGE(BSprites[cell]) TO (x*16, y*16)
+    IF cell==3 {
+      manX = x
+      manY = y
+    }
+  }
+}
+
+WHILE Map[manY][manX]<>2 {
+  MOVE Man TO (manX*16, manY*16)
+  WAIT
+  IF KEYS.LeftArrow AND Map[manY][manX-1]==0 { manX = manX - 1 }
+  IF KEYS.RightArrow AND Map[manY][manX+1]==0 { manX = manX + 1 }
+  IF KEYS.UpArrow AND Map[manY-1][manX]==0 { manY = manY - 1 }
+  IF KEYS.DownArrow AND Map[manY+1][manX]==0 { manY = manY + 1 }
+}
+
+MOVE TEXT("Well done!") TO (300, 200)

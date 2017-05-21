@@ -1,0 +1,7 @@
+#!/bin/sh
+
+export OUT=/home/apt1002/python/nifki/nifki-lib.jar
+
+jar cvfm $OUT META-INF/MANIFEST.MF -C ~/java/classes/ org/sc3d/apt/crazon/vm/
+
+chmod a+x $OUT

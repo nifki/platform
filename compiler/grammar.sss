@@ -1,0 +1,298 @@
+# A grammar for a scripting language for use in a write-your-own computer game wiki. The words "file" and "wiki page" mean the same thing. Wiki pages are organised into a flat name space, and their names are strings that lex as SSS constants.
+
+# Each wiki page consists of a few configuration variables, a text file, and zero or more resource files. The resource files can be things like pictures or sound clips or data files for maps and high-score tables, and each has a simple filename such as "my-cat.png". The configuration variables fix things like the size of the display area and the frame rate. The text file obeys this grammar, and defines and documents the game logic. Finally, on each page there is a "play game" button which returns a Flash file or a Java applet or something.
+
+# The target audience is 7-year-olds and up, so the language has to be easy to learn as a first language. Therefore, the language uses special keywords instead of standard libraries for things like ABS and LEN, for manipulating sprites on the screen, and for reading the keyboard and mouse. The scope rules for variables are simple and concrete. There's no attempt at modularity beyond what the wiki provides. Everything except sprites is passed and assigned by value.
+# Question: Currently the limitations imposed by the web make this a compiled language. Can anybody think of a way of adding an immediate mode? It would be a really Good Thing for the target audience.
+# Question: where are these comments allowed? Just in declarations or also in statements? My hunch is just in declarations, but we should allow comments in statements and treat them as part of the code.
+
+# Status of this file: provisional specification.
+
+###############################################################################
+
+c ::= {Comment {COMMENT}}
+
+# A CONSTANT or an IDENTIFIER. Identifiers in crazon are not case-sensitive, and this is a reasonable approximation of a mixed-case identifier. The only thing it does not allow is an identifier written entirely in capital letters with more than one letter, because that would be a keyword.
+identifier ::= {
+  Constant {CONSTANT}
+  Identifier {IDENTIFIER}
+}
+
+# A subscript selects part of a value for the purposes of reading or writing it. Tables can be subscripted by booleans, numbers, strings and tables. If the subscript is itself a table, it is copied before being used. Objects can be subscripted only by the names of their attributes. Strings can be subscripted by character positions from '0' to 'length-1', each character being a number from '0' to '0xFFFF'.
+subscript ::= {
+
+  # Any expression that evaluates to a boolean, number, string or table can be used as a subscript of a table.
+  Square {SQUARE(expression)}
+
+  # The notation 'e.B' is syntactic sugar for 'e["B"]', i.e. subscripting by a constant string. To use this notation, the string must lex as an identifier.
+  Dot {"." identifier}
+}
+
+# A boolean is either TRUE or FALSE. Booleans are used in IF and WHILE statements and are different from e.g. 1 and 0.
+boolean ::= {
+  True {"TRUE"}
+  False {"FALSE"}
+}
+
+# An input is an expression whose value can change spontaneously without the program doing anything. For those expressions that evaluate to tables, the table is always a fresh copy of the 'internal' table.
+input ::= {
+
+  # Evaluates to a table with number fields "X", "Y" and boolean fields "Left", "Middle" and "Right".
+  Mouse {"MOUSE"}
+
+  # Evaluates to a table with a boolean field for each key on the keyboard indicating whether the key is pressed or not. The fields are called things like "A", "B", "UpArrow", "LeftShift", "F6", "Number1", "Keypad1" etc. We must write a wiki page that provides functions for translating between strings and key-codes.
+  Key {"KEYS"}
+
+  # Evaluates to the next character in the keyboard buffer, a string of length 1, or the empty string if there is none. This is completely independent of "KEYS", and does things like auto-repeat and modifier keys.
+  Get {"GET"}
+
+  # Evaluates to the current time in milliseconds, a number. The zero point of time is arbitrary.
+  Time {"TIME"}
+
+  # Evaluates to a random number from 0.0 to 1.0.
+  Random {"RANDOM"}
+}
+
+size ::= {Size {"SIZE" ROUND(expressionPair)}}
+
+# An 'object' constructs and evaluates to a fresh object, except for Window which always returns the unique window object.
+object ::= {
+
+  # Constructs a sprite object. The expression must evaluate to a picture object, such as one of the resource files that are attached to wiki pages. The expressionPair is used to initialise the sprite's size. Other attributes of the sprite object are set to default values. Sprites are initially invisible; a "MOVE" command is needed to make the sprite visible (and define its position).
+  # Sprites have attributes "X", "Y", "IsVisible", "Width", "Height", "Depth" and "Picture".
+  Sprite {"SPRITE" ROUND(expression) size?}
+
+  # Constructs a text object. The expression must evaluate to a string which is used as the initial text. Other attributes are set to default values.
+  # TEXT objects have attributes "X", "Y", "IsVisible", "Width", "Height", "Depth", "Text", "Font", "FontSize". There is a small fixed set of fonts: "Serif", "Sans", "Fixed" and "Cursive" with optional suffixes "Bold" and "Italic". A typical font name is "FixedBoldItalic". FontSize is measured in pixels, and is the design height of the font, as distinct from Height which describes the bounding box of the object and depends on e.g. whether the text includes characters with ascenders or descenders.
+  Text {"TEXT" ROUND(expression)}
+
+  # Evaluates to the unique object which represents the window.
+  # The window has attributes "X", "Y", "IsVisible", "Width" and "Height".
+  Window {"WINDOW"}
+  
+  # Perhaps some kind of vector graphics?
+}
+
+# An expression is something that can be evaluated. The non-terminals from "atom" to "expression" should be read and understood together. The syntax of expressions obeys a conventional precedence grammar. The precedence parser is an additional step after the SSS parser has done its job, because the pure SSS version made a vast 200,000 transition NDFA and used 100Mb of back-tracking stack!
+# Values are booleans, numbers, strings (counted array of bytes, U16 encoding), tables (= hashes = dictionaries), functions (with side-effects) or objects (sprites, pictures, the window and other real-world things).
+# There is a total order on booleans, numbers, strings, and on tables that only contain orderable values. For details, see the comment by the less-than operator ("<") below. Any orderable value can be used as a key in a table. Equality is defined on all values, including the unorderable ones (functions, objects, and tables that contain unorderable values).
+# Tables are always passed and assigned by value (implement using copy-on-write) so that they behave just like numbers and strings. Functions are immutable. Objects are passed by reference and have a fixed set of attributes. There is no copy-on-write for objects. All values are acyclic and automatically deleted using reference counting.
+# Question: audio clips?
+
+atom ::= {
+
+  # A literal boolean.
+  Boolean {boolean}
+
+  # A literal number. Numbers can be any double-precision floating point number apart from infinities and NANs.
+  Number {NUMBER}
+
+  # A literal string. Strings are immutable counted arrays of 16-bit unicode characters.
+  String {STRING}
+
+  # A literal table. Constructs a fresh table with the specified contents. In particular, the empty table is written "[]". Otherwise, this notation is syntactic sugar for constructing a table by starting with the empty table and assigning to its fields.
+  # Convention: a list of length 'n' is a table with keys from '0' to 'n-1'.
+  # Convention: a set is a table whose values are all "TRUE" or "FALSE".
+  # Implementation: tables can be implemented as balanced binary trees.
+  Table {SQUARE(listField?)}
+
+  # Constructs a fresh object.
+  Object {object}
+
+  # Reads something from an input device.
+  Input {input}
+
+  # Round brackets can be used to disambiguate precedence of operators.
+  Bracket {ROUND(expression)}
+
+  # Either a local variable or the abbreviated form of a global variable on this page, according to what assignments to this identifier exist in the file.
+  Short {identifier}
+  
+  # A fully qualified global variable, possibly in another file.
+  Long {identifier "_" identifier}
+  
+  # The argument table of the current subroutine.
+  Args {"ARGS"}
+}
+
+# I have appended a digit to the production names to show the precedence. The same numbering is used for prefix, infix and postfix operators.
+prefix ::= {
+  Neg7 {"-"} # Negation of numbers, reversal of strings.
+  Floor7 {"FLOOR"} # Round number towards minus infinity.
+  Round7 {"ROUND"} # "ROUND x" is equal to "FLOOR (x+0.5)"
+  Ceil7 {"CEIL"} # "CEIL x" is equal to "- FLOOR - x".
+  Abs7 {"ABS"} # Absolute value.
+  Sqrt7 {"SQRT"} # Square-root of a number.
+  Len7 {"LEN"} # Length of string. Number of keys in a table.
+  Str7 {"STR"} # Convert boolean or number to string. For any boolean or number x, VAL STR x = x. Syntax for numbers is optional "-" followed by SSS number (no white-space). Question: should STR x (where x is a string) return x or quoted escaped x? Question: should STR work for tables too?
+  Val7 {"VAL"} # Convert string to boolean or number. STR VAL x can differ in precision from x.
+  Trim7 {"TRIM"} # Remove leading and trailing whitespace from a string.
+  Upper7 {"UPPER"} # Convert string to upper-case.
+  Lower7 {"LOWER"} # Convert string to lower-case.
+  Not2 {"NOT"} # Logical NOT of booleans. "NOT x" has the same precedence as "TRUE XOR x".
+}
+
+# All infix operators are left-associative except "**" which is right-associative.
+# Proposal: add a left-associative ":" operator for concatenating things. If the left-hand argument is a table, the right-hand argument is added to the table at a key equal to the previous size of the table (this is useful for appending to lists). Otherwise, if either argument is a string, the other is converted to a string using STR, and concatenated.
+infix ::= {
+  Power8 {"**"} # For number 'x' and integer 'y', 'x**y' is 'x' to the power of 'y'.
+  Mul6 {"*"} # Multiplication of numbers. Replication of strings.
+  Div6 {"/"} # Division of numbers. Division by zero is an error. "HELLO"/2 is "LO". 2/"HELLO" is "HE". For tables 'x' and 'y', 'x/y' is the table formed from 'x' by deleting all keys that do not appear in 'y'.
+  Mod6 {"%"} # For numbers 'x' and 'y', 'x%y' is equal to 'x-y*FLOOR(x/y)'.
+  Add5 {"+"} # Addition of numbers. Concatenation of strings. For tables 'x' and 'y', 'x+y' is the table formed by applying to 'x' all assignments in 'y'.
+  Sub5 {"-"} # Subtraction of numbers. "HELLO"-2 is "HEL". 2-"HELLO" is "LLO". For tables 'x' and 'y' 'x-y' is the table formed from 'x' by deleting all keys that appear in 'y'.
+  Min4 {"MIN"} # Minimum (compatible with "<").
+  Max4 {"MAX"} # Maximum (compatible with "<").
+  Eq3 {"=="} # Compares all by value except objects by reference. Tables are compared pointwise.
+  Lt3 {"<"} # Booleans are less than numbers are less than strings are less than tables. "FALSE<TRUE". Order is obvious for numbers. Strings are sorted ASCII-betically. Tables are compared by reading their keys in sorted order and comparing the corresponding values. The first value not equal in the two tables defines the result. If the two tables do not have the same keys, the lesser is the one in which a missing key is found first. Any other comparison is an error.
+  Gt3 {">"} # Symmetric to "<".
+  Lg3 {"<>"} # Union of "<" and ">". Works only for orderable types.
+  Ne3 {"!="} # Negation of "==". Works even for unorderable types.
+  Ge3 {">="} # Negation of "<". Note: the relation does not contain "==".
+  Le3 {"<="} # Negation of ">".
+  Xor2 {"XOR"} # Logical XOR of booleans.
+  And1 {"AND"} # Logical AND of booleans.
+  Or0 {"OR"} # Logical OR of booleans.
+}
+
+postfix ::= {
+  Subscript9 {subscript} # Reads a field of a table, an attribute of an object or a character of a string.
+  Call9 {ROUND(listField?)} # Calls a function and evaluates to its return value. There is also syntactic sugar for calling a function as a statement and discarding its return value.
+}
+
+head ::= {Some {prefix* atom postfix*}}
+tail ::= {Some {infix head}}
+expression ::= {List {head tail*}}
+
+# A field is part of a Table expression. This notation is merely syntactic sugar to avoid writing lots of assignments. Therefore it does not cope with every case. The only keys it copes with are some strings and consecutive integers.
+field ::= {
+
+  # Named fields are assigned to strings. To use this notation the string must lex as an identifier
+  Named {identifier "=" expression}
+
+  # Numbered fields are assigned to consecutive integers starting from zero. In a listField, any Named fields must follow any Numbered fields. For example, the Table expression '["a", "b", X="c"]' creates a table mapping 0 to "a", 1 to "b" and "X" to "c".
+  Numbered {expression}
+}
+
+commaField ::= {Comma {"," c* field}}
+listField ::= {List {c* field commaField*}}
+
+toBy ::= {To {"TO"} By {"BY"}}
+expressionPair ::= {Some {expression? "," expression?}}
+
+# An action is a statement that does something to an object, usually a sprite. These statements are all ways of writing to attributes of the object. All attributes can be written using "SET" statements; the alternatives are just syntactic sugar.
+action ::= {
+
+  # Modify an attribute of an object. The expression must evaluate to an object.
+  Set {"SET" expression "." identifier "=" expression}
+
+  # Move the specified sprite (expression 1) absolute or relative. This command also makes the sprite visible.
+  Move {"MOVE" expression toBy ROUND(expressionPair)}
+
+  # Hides a sprite (makes it invisible).
+  Hide {"HIDE" expression}
+  
+  # Resize a sprite, relative or absolute. Negative sizes should reflect the picture. If one of the components is omitted, it is chosen so as to preserve the aspect ratio. It is forbidden to omit both components. The centre of enlargement is the sprite's top-left corner.
+  Resize {"RESIZE" expression toBy ROUND(expressionPair)}
+  
+  # Hides all visible sprites.
+  Cls {"CLS"}
+}
+
+# An lValue is something that can appear on the left-hand side of an assignment statement, i.e. something whose value can be modified. Attributes of objects, which can only be modified using a "SET" statement, are not lValues.
+lValue ::= {
+
+  # A local variable. The presence in a file of an lValue of this form causes all occurrences of the identifier to refer to local variables. The use of an identifier as a FOR variable has the same effect.
+  Local {identifier subscript*}
+  
+  # The short form of a global variable on this page. It is an error for the identifier to be the same as that of a local variable in the same file.
+  Global {"GLOBAL" identifier subscript*}
+
+  # A fully-qualified global variable, possibly in another page.
+  Long {identifier "_" identifier subscript*}  
+}
+
+# Part of IF, WHILE and FOR statements.
+else ::= {Some {"ELSE" BRACE(statement*)}}
+
+# Part of IF statements.
+elif ::= {Some {"ELIF" expression BRACE(statement*)}}
+
+# Part of BREAK statements.
+break ::= {Some {"BREAK"}}
+
+# A statement is an imperative command that can be executed.
+statement ::= {
+  
+  # Program comment.
+  Comment {COMMENT}
+  
+  # No-op.
+  NoOp { ";" }
+
+  # Stores a value in a storage location. The value is assigned by value (using copy-on-write), except that objects are assigned by reference. In particular, if you store a table inside itself then you actually store a copy of the old value of the table. It is therefore impossible to create a cyclic structure.
+  Assign {lValue "=" expression}
+  
+  # The expression must evaluate to a boolean. If "TRUE", executes the 'then' part (the first brace of statements), otherwise executes the 'else' part. Either can be empty.
+  If {"IF" expression BRACE(statement*) elif* else?}
+  
+  # The expression must evaluate to a boolean. If "TRUE", executes the body of the loop (the first brace of statements) and then repeats. If "FALSE", executes the 'else' part and terminates. A "BREAK" statement in the loop body can cause the WHILE loop to terminate immediately without executing the 'else' part.
+  While {"WHILE" expression BRACE(statement*) else?}
+  
+  # The expression must evaluate to a number, string or table. If the expression is a number 'n', it must be an integer. Constructs a table mapping each of the integers '0' to 'n-1' to itself. If the expression is a string, constructs a table mapping each character position in the string to the corresponding character (a string of length one). If the expression is a table, takes a copy. In all cases ends up with a table.
+  # Then, loops through the keys of the table in sorted order (compatible with "<"). For each key, binds the key and value to the two identifiers (which are interpreted as local variables) and executes the body of the loop (the first brace of statements). The key is assigned before the value. After the last iteration, executes the 'else' part. A "BREAK" statement in the loop body can cause the FOR loop to terminate immediately without executing the 'else' part.
+  For {
+    "FOR" identifier? "=" identifier? "IN" expression BRACE(statement*) else?
+  }
+
+  # Break out of one or more enclosing WHILE or FOR loops. The number of consecutive repeats of "BREAK" indicates how many loops to break out of.
+  Break {break+}
+
+  # Abort the entire program with the specified error message (the expression must evaluate to a string).
+  Error {"ERROR" expression}
+
+  # Return a value from the current function. If the expression is omitted, '[]' is used.
+  Return {"RETURN" expression?}
+
+  # Functions can be called both as statements and as expressions. As a statement, the notation 'f(...)' is syntactic sugar for 'IF (f(...)!=[]) {ERROR "A function can be called as a subroutine only if it returns [] (the empty table)"}'.
+  Call {expression ROUND(listField?)}
+  
+  # Sugar for changing the attributes of objects or otherwise changing the positions of things.
+  Action {action}
+  
+  # Updates the screen (without flickering) to reflect the new positions and attributes of all the sprites, and blocks until it is time for the next frame.
+  Wait {"WAIT"}
+  
+  # Prints the expression to standard out. This is for debugging: in 'production' versions of crazon this may do nothing.
+  Dump {"DUMP" expression}
+  
+  # Question: No PRINT or INPUT statement yet, pending agreement on what they should do. We don't have an obvious way of providing a console you see. My preferred solution is to provide a console in some implementations, in a separate window, or perhaps using actual stdin and stdout, but only for debugging purposes, and not in the Flash version that most people use. Also suggested is a Quake-style console overlayed on the game, and a background layer underlayed. Both have actual uses in addition to debugging. Both require us to define awkward stuff about cursors, fonts and scrolling, because the appearance of the console is part of the game. Any advance?
+}
+
+# One of the arguments of a function prototype.
+arg ::= {
+
+  # A variable that receives the value of a numbered entry in the argument table.
+  Numbered {identifier}
+  
+  # A variable that receives the value of a named entry in the argument table. Named arguments can optionally have a default value.
+  Named {identifier "=" expression?}
+}
+
+commaArg ::= {Comma {"," c* arg}}
+listArg ::= {List {c* arg commaArg*}}
+
+# A top-level declaration. Declarations differ from statements in that they cannot appear inside function definitions.
+declaration ::= {
+
+  # Defines a function, and binds it to the specified global variable. This is the only way of creating new function values. There are no closures or anything complicated like that. All definitions take effect at the moment the program loads, and before it starts executing, so you can refer to functions forwards, backwards and recursively, even on other wiki pages.
+  # The semantics of calling a function is as follows. The listField in the function call is used to construct a table. ...fill in later... Then the statements are executed until there are no more or until a RETURN statement.
+  # It is an error to define a function with the same name as a local variable within the same file.
+  Define {"DEF" identifier ROUND(listArg?) BRACE(statement*)}
+
+  # Any statement used as a declaration is executed immediately. This can be used both for initialisation and then also for the main game loop.
+  Statement {statement}
+}
+
+# A complete file consists of zero or more declarations.
+ROOT declaration*

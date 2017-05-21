@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Compiles all files in this package.
+
+/usr/share/jdk1.3.1_15/bin/javac -g -deprecation -d ~/java/classes/ *.java 2>/tmp/err || {
+  xmessage -file /tmp/err &
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Compiles all files in this package and in all the packages on which it
+# depends.
+
+/usr/local/share/jdk1.3/bin/javac -g:none -d ~/java/classes/ util/*.java state/*.java op/*.java platform/*.java *.java

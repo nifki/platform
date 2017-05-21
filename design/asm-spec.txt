@@ -1,0 +1,259 @@
+---
+
+# A = <expr>
+
+<expr> STORE(A)
+
+# A[2] = <expr>
+
+LOAD(A) 2 <expr> PUT STORE(A)
+
+# A.X = <expr> is equivalent to A["X"] = <expr>
+
+LOAD(A) "X" <expr> PUT STORE(A)
+
+# A[2][3] = <expr>
+
+# LOAD(A) 2 DGET 3 DGET <expr> PUT PUT STORE(A) is wrong, should be:
+LOAD(A) 2 DGET 3 <expr> PUT PUT STORE(A)
+
+# Stack states during execution of the above (the correct version):
+#
+# A
+# A 2
+# A 2 A[2]
+# A 2 A[2] 3
+# A 2 A[2] 3 <expr>
+# A 2 A[2]
+# A
+#
+
+# A[2][3][4] = <expr>
+
+LOAD(A) 2 DGET 3 DGET 4 <expr> PUT PUT PUT STORE(A)
+
+# A[2][3][4][5] = <expr>
+
+LOAD(A) 2 DGET 3 DGET 4 DGET 5 <expr> PUT PUT PUT PUT STORE(A)
+
+---
+
+# A[f()][3] = B[g()][3]
+
+LOAD("A") LOAD("f") CALL DGET 3    # L-value
+LOAD("B") LOAD("g") CALL GET 3 GET # R-value
+PUT PUT STORE("A")                 # Assignment
+
+---
+
+# FOR k=v IN table { DUMP "frog" }
+
+LOAD("table")
+FOR LSTORE(v) LSTORE(k)
+  "frog" DUMP
+NEXT
+ELSE
+
+---
+
+RESIZE <sprite> TO (<x>, <y>) is implemented as:
+
+  <sprite> LSTORE("TEMP");
+  LLOAD("TEMP") <x> SET("W");
+  LLOAD("TEMP") <y> SET("H");
+
+RESIZE <sprite> TO (<x>, ) is implemented as:
+
+  <sprite> LSTORE("TEMP");
+  LLOAD("TEMP")
+    LLOAD("TEMP") "H" GET
+      LLOAD("TEMP") "W" GET
+        /
+      LLOAD("TEMP") <x> SET("W")
+      LLOAD("TEMP") "W" GET
+        *
+      SET("H");
+
+RESIZE <sprite> TO (, <y>) is implemented as:
+
+  <sprite> LSTORE("TEMP");
+  LLOAD("TEMP")
+    LLOAD("TEMP") "W" GET
+      LLOAD("TEMP") "H" GET
+        /
+      LLOAD("TEMP") <y> SET("H")
+      LLOAD("TEMP") "H" GET
+        *
+      SET("W");
+
+---
+SPRITE <picture> SIZE(<x>, <y>) is implemented as an elided SPRITE-followed-by-RESIZE, as follows:
+      <picture> SPRITE LSTORE("TEMP");
+      LLOAD("TEMP") <x> SET("W"); LLOAD("TEMP") <y> SET("H");
+      LLOAD("TEMP")
+---
+MOVE <sprite> TO (<x>, <y>) is implemented as:
+      <sprite> LSTORE("TEMP");
+      LLOAD("TEMP") <x> SET("X");
+      LLOAD("TEMP") <y> SET("Y");
+
+MOVE <sprite> BY (<x>, <y>) is implemented as:
+      <sprite> LSTORE("TEMP");
+      LLOAD("TEMP") <x> LLOAD("TEMP") "X" GET + SET("X");
+      LLOAD("TEMP") <y> LLOAD("TEMP") "Y" GET + SET("Y");
+---
+The literal table [3, 4, a=5] is implemented as follows:
+      TABLE
+        0 3 PUT
+        1 4 PUT
+        "a" 5 PUT
+---
+The function call f(3, 4, a=5) is implemented as follows:
+    f
+      TABLE
+        0 3 PUT
+        1 4 PUT
+        "a" 5 PUT
+        CALL
+---
+The subroutine call f(3, 4, a=5) is implemented as follows:
+    f
+      TABLE
+        0 3 PUT
+        1 4 PUT
+        "a" 5 PUT
+        CALL
+      DROPTABLE
+---
+
+In the following, stack items are listed in the order that they would be removed
+from the stack (so the top of a list is always the top of the stack).
+
+TABLE: Pushes the empty table onto the stack.
+"Literal": Pushes a literal string onto the stack. Similar for other primitive literals.
+SPRITE: Pushes a new sprite onto the stack.
+    Takes off the stack:
+     - Height
+     - Width
+     - Picture
+    and uses them to construct the sprite. Leaves on the stack:
+     - The sprite
+STORE(name): Set the value of a global variable. 'name' is a variable name (a
+    string literal).
+    Takes off the stack:
+     - Value
+    and assigns the value to the variable.
+LOAD(name): Read the value of a global variable. 'name' is a variable name (a
+    string literal).
+    Reads the value of the variable. Leaves on the stack:
+     - Value
+LSTORE(name): Set the value of a local variable. 'name' is a variable name (a
+    string literal).
+    Takes off the stack:
+     - Value
+    and assigns the value to the variable.
+LLOAD(name): Read the value of a local variable. 'name' is a variable name (a
+    string literal).
+    Reads the value of the variable. Leaves on the stack:
+     - Value
+SET(name): Modifies an attribute of an object.
+    Takes off the stack:
+     - Value
+     - Object
+    Assigns the specified value to the 'name' attribute of the specified object.
+PUT: Store value in a table (making a new table).
+    Takes off the stack:
+     - Value
+     - Key
+     - Table
+    Stores (with copy on write) the value in the table at the key. Leaves on the
+    stack:
+     - New value of the table
+GET: Read value from table.
+    Takes off the stack:
+     - Key
+     - Table
+    Reads the value from the table at the key. Leaves on the stack:
+     - Value
+DGET: Read value from table but leave the table and key on the stack. This is
+    for deep assignments.
+    Takes off the stack:
+     - Key
+     - Table
+    Leaves on the stack:
+     - Value
+     - Key
+     - Table
+IF: Binary decision. Introduces a '<cond> IF <then> THEN <else> ELSE' construct.
+    Takes off the stack:
+     - Boolean
+    If 'TRUE', does nothing, otherwise skips to after next unmatched 'THEN' instruction.
+THEN: Part of an IF construct.
+    Skips to after next unmatched 'ELSE' instruction.
+ELSE: Part of 'IF', 'LOOP' and 'FOR' constructs.
+    Does nothing (it's a marker).
+LOOP: Iteration. Introduces a 'LOOP <cond> WHILE <body> NEXT <else> ELSE'
+    construct.
+    Does nothing (it's a marker).
+WHILE: Part of a 'LOOP' construct.
+    Takes off the stack:
+     - Boolean
+    If the Boolean is TRUE, does nothing, otherwise skips to after the next
+    unmatched 'NEXT' instruction.
+NEXT: Part of 'LOOP' and 'FOR' constructs.
+    Skips backwards to just after the previous unmatched 'LOOP' or 'FOR'. If it
+    was a FOR, leaves on the stack:
+     - Next value.
+     - Next key.
+    If the table has been exhausted, does nothing (i.e. does not skip
+    backwards).
+BREAK: Escapes from 'LOOP' and 'FOR' constructs.
+    Counts the number consecutive 'BREAK' instructions, then skips forwards that
+    number of unmatched 'ELSE's.
+    (Not taking a number so it can't be changed dynamically)
+FOR: Iterate over the values of a table. Introduces a '<table> FOR <body> NEXT
+    <else> ELSE' construct.
+    Pops a value, makes an iterator, and remembers it. If the value is a table
+    the iterator returns the table keys and values in the order of their keys.
+    If the value is a string, the iterator loops through the characters in the
+    string, returning the character index as the key and the character value as
+    the value.
+    Skips forwards to the next unmatched NEXT and executes it.
+# Future: add an instruction for looping through integers from '0' to 'n-1'.
+CALL: Function call.
+    Takes off the stack:
+     - An argument, which must be a table.
+     - A function.
+    Constructs a new stack frame. Leaves on the stack:
+     - The argument table.
+    and sets the program counter to the start of the body of the function.
+RETURN: Function return. Must only appear in function bodies (i.e. following a
+    DEF).
+    Takes off the stack:
+     - The return value.
+    Restores the caller's state. Leaves on the stack:
+     - The return value.
+DUMP: Prints out a value on the console.
+    Takes off the stack:
+     - The value to print.
+ERROR: Outputs an error message and halts the program.
+    Takes off the stack:
+     - The error message to output.
+WAIT: Displays the current frame and waits until the next frame is due.
+DEF(name): Function definition.
+    'name' is the variable name (a string literal) of the defined function.
+    Function body extends to the next DEF instruction or to the end of the file.
+    The main program ends at the first DEF.
++: Adds two values according to the semantics of the source language.
+    Takes off the stack:
+     - First operand.
+     - Second operand.
+    Leaves on the stack:
+     - The result.
+DROP: Pops the top stack item and discards it.
+DROPTABLE: Equivalent to:
+    TABLE != IF;
+      "A function can be called as a subroutine only if it returns the empty table []" ERROR;
+    THEN; ELSE;
+
+All other operators in the language have corresponding instructions in the byte-code, defined analogously to +.

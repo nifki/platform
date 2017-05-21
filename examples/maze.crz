@@ -1,0 +1,300 @@
+# A maze game.
+
+WINDOW 4 SET(X)
+WINDOW 4 SET(Y)
+WINDOW 8 SET(W)
+WINDOW 8 SET(H)
+
+# Define the mapping of characters to sprite names.
+TABLE
+  " " "examples/blank.png" PUT
+  "A" "examples/blank.png" PUT # This marks the start position.
+  ":" "examples/earth.png" PUT
+  "+" "examples/diamond.png" PUT
+  "O" "examples/boulder.png" PUT
+  "#" "examples/wall.png" PUT
+  "<" "examples/left.png" PUT
+  ">" "examples/right.png" PUT
+STORE(_spriteNames) ;
+
+# Define some useful constants.
+LOAD(_spriteNames) " " GET STORE(_blank) ;
+LOAD(_spriteNames) "+" GET STORE(_diamond) ;
+LOAD(_spriteNames) "O" GET STORE(_boulder) ;
+TABLE
+  LOAD(_spriteNames) " " GET FALSE PUT
+  LOAD(_spriteNames) ":" GET FALSE PUT
+  LOAD(_spriteNames) "+" GET TRUE PUT
+  LOAD(_spriteNames) "O" GET TRUE PUT
+  LOAD(_spriteNames) "#" GET FALSE PUT
+  LOAD(_spriteNames) "<" GET TRUE PUT
+  LOAD(_spriteNames) ">" GET FALSE PUT
+STORE(_left) ;
+TABLE
+  LOAD(_spriteNames) " " GET FALSE PUT
+  LOAD(_spriteNames) ":" GET FALSE PUT
+  LOAD(_spriteNames) "+" GET TRUE PUT
+  LOAD(_spriteNames) "O" GET TRUE PUT
+  LOAD(_spriteNames) "#" GET FALSE PUT
+  LOAD(_spriteNames) "<" GET FALSE PUT
+  LOAD(_spriteNames) ">" GET TRUE PUT
+STORE(_right) ;
+TABLE
+  LOAD(_spriteNames) " " GET FALSE PUT
+  LOAD(_spriteNames) ":" GET FALSE PUT
+  LOAD(_spriteNames) "+" GET FALSE PUT
+  LOAD(_spriteNames) "O" GET FALSE PUT
+  LOAD(_spriteNames) "#" GET TRUE PUT
+  LOAD(_spriteNames) "<" GET TRUE PUT
+  LOAD(_spriteNames) ">" GET TRUE PUT
+STORE(_wall) ;
+
+# Define the map.
+TABLE
+   0 "################" PUT
+   1 "#AOO: O:O :OO+O#" PUT
+   2 "#+:#<>+<>+<>+O+#" PUT
+   3 "#+#+OO>OO>OO>+O#" PUT
+   4 "#+#OO<O++#++#O+#" PUT
+   5 "#+#O< + +#++#+O#" PUT
+   6 "#+#O#:+:<:++#O+#" PUT
+   7 "#+#+ >:<>##:#+O#" PUT
+   8 "#+#:#   O O:#O+#" PUT
+   9 "#+#:#::O:<O>O+O#" PUT
+  10 "#+#:> O:<OOO>O+#" PUT
+  11 "#+#::>:<+:++#+O#" PUT
+  12 "#+>::::+#:++#O+#" PUT
+  13 "#+:>##:#O##:<+O#" PUT
+  14 "#::::::::::::::#" PUT
+  15 "################" PUT
+LSTORE(map) ;
+
+# Construct sprites for the map, count diamonds, and find the start position.
+TABLE STORE(_bSprites) ;
+0.0 STORE(_numDiamonds) ;
+LLOAD(map) FOR DROP LSTORE(y) ;
+  LOAD(_bSprites) LLOAD(y) TABLE PUT STORE(_bSprites) ;
+  LLOAD(map) LLOAD(y) GET LSTORE(row) ;
+  LLOAD(row) FOR DROP LSTORE(x) ;
+    # TABLE "x" LLOAD(x) PUT "y" LLOAD(y) PUT PRINT
+    LLOAD(row) LLOAD(x) GET LSTORE(char) ;
+    LOAD(_spriteNames) LLOAD(char) GET 1 1 SPRITE LSTORE(sp) ;
+    LLOAD(sp) LLOAD(x) SET(X) ;
+    LLOAD(sp) LLOAD(y) SET(Y) ;
+    LLOAD(sp) TRUE SET(IsVisible) ;
+    LOAD(_bSprites) LLOAD(y) DGET LLOAD(x) LLOAD(sp) PUT PUT STORE(_bSprites) ;
+    LLOAD(char) "A" == IF ;
+      LLOAD(x) LSTORE(manX) ;
+      LLOAD(y) LSTORE(manY) ;
+    THEN ;
+      LLOAD(char) "+" == IF ;
+        LOAD(_numDiamonds) 1 + STORE(_numDiamonds) ;
+      THEN ; ELSE ;
+    ELSE ;
+  NEXT ; ELSE ;
+NEXT ; ELSE ;
+
+LOAD(_numDiamonds) DUMP " diamonds to collect\A/" DUMP
+
+# Construct a sprite for the man.
+"examples/man.png" 1 1 SPRITE LSTORE(man)
+LLOAD(man) TRUE SET(IsVisible)
+
+# Game loop.
+0 LSTORE(dx)
+0 LSTORE(dy)
+0 LSTORE(manCount)
+0 LSTORE(bgCount)
+LOOP LOAD(_numDiamonds) 0 > WHILE ;
+
+  # Display a frame.
+  LLOAD(man) LLOAD(manX) LLOAD(dx) LLOAD(manCount) * - SET(X) ;
+  LLOAD(man) LLOAD(manY) LLOAD(dy) LLOAD(manCount) * - SET(Y) ;
+  WINDOW LLOAD(man) "X" GET 3.5 - SET(X) ;
+  WINDOW LLOAD(man) "Y" GET 3.5 - SET(Y) ;
+  WINDOW LLOAD(bgCount) 0.05 * SET(B)
+  WAIT ;
+
+  # Read the keyboard, if the man is exactly in a square.
+  LLOAD(manCount) 0 == IF ;
+    0 LSTORE(dx) ;
+    0 LSTORE(dy) ;
+    KEYS "LeftArrow" GET IF ;
+      LLOAD(dx) 1 - LSTORE(dx)
+    THEN ; ELSE ;
+    KEYS "RightArrow" GET IF ;
+      LLOAD(dx) 1 + LSTORE(dx)
+    THEN ; ELSE ;
+    KEYS "UpArrow" GET IF ;
+      LLOAD(dy) 1 - LSTORE(dy)
+    THEN ; ELSE ;
+    KEYS "DownArrow" GET IF ;
+      LLOAD(dy) 1 + LSTORE(dy)
+    THEN ; ELSE ;
+    LLOAD(dy) 0 != IF ;
+      0 LSTORE(dx)
+    THEN ; ELSE ;
+    # Check what we're about to hit.
+      LOAD(_bSprites)
+      LLOAD(manY) LLOAD(dy) + GET
+      LLOAD(manX) LLOAD(dx) + GET
+    LSTORE(aheadSP)
+    LLOAD(aheadSP) "Picture" GET LSTORE(ahead) ;
+    # Is it a diamond?
+    LLOAD(ahead) LOAD(_diamond) == IF ;
+      LOAD(_numDiamonds) 1 - STORE(_numDiamonds) ;
+      LOAD(_numDiamonds) DUMP " diamonds left\A/" DUMP ;
+      20 LSTORE(bgCount) ;
+    THEN ; ELSE ;
+    # Is it a boulder?
+    LLOAD(ahead) LOAD(_boulder) == IF ;
+      # Check what we're pushing it into.
+        LOAD(_bSprites)
+        LLOAD(manY) LLOAD(dy) 2 * + GET
+        LLOAD(manX) LLOAD(dx) 2 * + GET
+        "Picture" GET
+        LOAD(_blank) ==
+        LLOAD(dy) 0 == AND
+      IF ;
+        # Push succeeds.
+          LOAD(_bSprites)
+          LLOAD(manY) LLOAD(dy) 2 * + GET
+          LLOAD(manX) LLOAD(dx) 2 * + GET
+          LOAD(_boulder)
+        SET(Picture)
+      THEN ;
+        # Push fails.
+        0 LSTORE(dx) ;
+        0 LSTORE(dy) ;
+      ELSE ;
+    THEN ; ELSE ;
+    # Is it a wall?
+    LOAD(_wall) LLOAD(ahead) GET IF ;
+      0 LSTORE(dx) ;
+      0 LSTORE(dy) ;
+    THEN ; ELSE ;
+    # Does the man move?
+    LLOAD(dx) 0 != LLOAD(dy) 0 != OR IF ;
+      LLOAD(manX) LLOAD(dx) + LSTORE(manX) ;
+      LLOAD(manY) LLOAD(dy) + LSTORE(manY) ;
+      1.0 LSTORE(manCount)
+      # Overwrite the square ahead with a blank.
+      LLOAD(aheadSP) LOAD(_blank) SET(Picture)
+    THEN ; ELSE ;
+  THEN ; ELSE ;
+
+  # Move the man.
+  LLOAD(manCount) 0 > IF ;
+    LLOAD(manCount) 0.25 - LSTORE(manCount)
+  THEN ; ELSE ;
+  LLOAD(manCount) 0 == IF ;
+    0 LSTORE(dx) ;
+    0 LSTORE(dy) ;
+  THEN ; ELSE ;
+  
+  # Fade the background.
+  LLOAD(bgCount) 0 > IF ;
+    LLOAD(bgCount) 1 - LSTORE(bgCount) ;
+  THEN ; ELSE ;
+
+  # Scan for boulders.
+  LOAD(_bSprites) FOR DROP LSTORE(y) ;
+    LOAD(_bSprites) LLOAD(y) GET LSTORE(row) ;
+    LLOAD(row) FOR DROP LSTORE(x) ;
+      LLOAD(row) LLOAD(x) GET LSTORE(boulderSp) ;
+      # Is it a boulder?
+      LLOAD(boulderSp) "Picture" GET LOAD(_boulder) == IF ;
+        # Which way to fall?
+        LOAD(_bSprites) LLOAD(y) 1 + GET LSTORE(rowBelow) ;
+        LLOAD(rowBelow) LLOAD(x) GET LSTORE(belowSp) ;
+        LLOAD(x) LSTORE(destX) ;
+        LLOAD(belowSp) "Picture" GET LSTORE(below) ;
+          LOAD(_left) LLOAD(below) GET
+          LLOAD(row) LLOAD(x) 1 - GET "Picture" GET LOAD(_blank) == AND
+        IF ;
+          # It could fall left.
+          LLOAD(x) 1 - LSTORE(destX) ;
+        THEN ; ELSE ;
+          LOAD(_right) LLOAD(below) GET
+          LLOAD(row) LLOAD(x) 1 + GET "Picture" GET LOAD(_blank) == AND
+        IF ;
+          # It could fall right.
+          LLOAD(x) 1 + LSTORE(destX) ;
+        THEN ; ELSE ;
+        # Is there anything in the way?
+        LLOAD(rowBelow) LLOAD(destX) GET LSTORE(destSp) ;
+          LLOAD(destSp) "Picture" GET LOAD(_blank) ==
+          LLOAD(destX) LLOAD(manX) LLOAD(dx) - !=
+          LLOAD(destX) LLOAD(manX) != AND
+          LLOAD(y) 1 + LLOAD(manY) !=
+          LLOAD(y) LLOAD(manY) != AND OR AND
+        IF ;
+          # Move the boulder.
+          LLOAD(boulderSp) LOAD(_blank) SET(Picture)
+          LLOAD(destSp) "falling" SET(Picture)
+          # Does it squash the man?
+            LLOAD(destX) LLOAD(manX) ==
+            LLOAD(y) 1 + LLOAD(manY) ==
+            LLOAD(y) 2 + LLOAD(manY) ==
+            OR AND
+          IF ;
+            LOAD(_boulder) STORE(_result) ;
+            BREAK BREAK BREAK
+          THEN ; ELSE ;
+        THEN ; ELSE ;
+      THEN ; ELSE ;
+      LLOAD(boulderSp) "Picture" GET "falling" == IF ;
+        LLOAD(boulderSp) LOAD(_boulder) SET(Picture)
+      THEN ; ELSE ;
+    NEXT ; ELSE ;
+  NEXT ; ELSE ;
+NEXT ;
+  LOAD(_diamond) STORE(_result) ;
+ELSE ;
+
+CLS
+
+LLOAD(man) FALSE SET(IsVisible)
+TABLE STORE(_bsprites)
+
+# Celebration fireworks.
+WINDOW 0 SET(X)
+WINDOW 0 SET(Y)
+WINDOW 0 SET(B)
+TABLE LSTORE(sparks)
+100 FOR DROP LSTORE(count) ;
+    LLOAD(sparks)
+    LLOAD(count)
+    TABLE
+    "x" 3.5 PUT
+    "y" 3.5 PUT
+    "dx" RAND 0.5 - 1 * PUT
+    "dy" RAND 0.5 - 1 * PUT
+    "sp" LOAD(_result) 1 1 SPRITE PUT
+  PUT LSTORE(sparks) ;
+NEXT ; ELSE ;
+LOOP ; TRUE WHILE ;
+  LLOAD(count) 1 + 100 % LSTORE(count) ;
+    LLOAD(sparks) LLOAD(count) GET "sp" GET FALSE SET(IsVisible)
+    LLOAD(sparks)
+    LLOAD(count) 
+    TABLE
+    "x" 3.5 PUT
+    "y" 3.5 PUT
+    "dx" RAND 0.5 - 1 * PUT
+    "dy" RAND 0.5 - 1 * PUT
+    "sp" LOAD(_result) 1 1 SPRITE PUT
+  PUT LSTORE(sparks) ;
+  LLOAD(sparks) FOR DROP LSTORE(i) ;
+    LLOAD(sparks) LLOAD(i) GET LSTORE(spark) ;
+    LLOAD(spark) "x" DGET LLOAD(spark) "dx" GET + PUT LSTORE(spark) ;
+    LLOAD(spark) "y" DGET LLOAD(spark) "dy" GET + PUT LSTORE(spark) ;
+    LLOAD(spark) "dy" DGET 0.01 + PUT LSTORE(spark) ;
+    LLOAD(spark) "sp" GET LSTORE(sparkSp) ;
+    LLOAD(sparkSp) LLOAD(spark) "x" GET SET(X) ;
+    LLOAD(sparkSp) LLOAD(spark) "y" GET SET(Y) ;
+    LLOAD(sparkSp) TRUE SET(IsVisible) ;
+    LLOAD(sparks) LLOAD(i) LLOAD(spark) PUT LSTORE(sparks) ;
+  NEXT ; ELSE ;
+  WAIT ;
+NEXT ; ELSE ;

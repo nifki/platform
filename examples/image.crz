@@ -1,0 +1,31 @@
+"images/alien-cup.png" 160 120 IMAGE LSTORE(image)
+LLOAD(image) TRUE SET(isVisible)
+1 NEG LSTORE(dx)
+1 NEG LSTORE(dy)
+LOOP TRUE WHILE
+  WINDOW 0.0 SET(R)
+  WINDOW 0.5 SET(B)
+  LOOP
+    FALSE
+      LLOAD(image) "X" GET LLOAD(image) "W" GET + LLOAD(dx) +
+      WINDOW "X" GET WINDOW "W" GET +
+    > OR
+      LLOAD(image) "X" GET LLOAD(dx) +
+      WINDOW "X" GET
+    < OR
+      LLOAD(image) "Y" GET LLOAD(image) "H" GET + LLOAD(dy) +
+      WINDOW "Y" GET WINDOW "H" GET +
+    > OR
+      LLOAD(image) "Y" GET LLOAD(dy) +
+      WINDOW "Y" GET
+    < OR
+  WHILE
+    WINDOW 0.5 SET(R)
+    WINDOW 0.0 SET(B)
+    RAND 0.5 - 30 * LSTORE(dx)
+    RAND 0.5 - 30 * LSTORE(dy)
+  NEXT ELSE
+  LLOAD(image) LLOAD(image) "X" GET LLOAD(dx) + SET(X)
+  LLOAD(image) LLOAD(image) "Y" GET LLOAD(dy) + SET(Y)
+  WAIT
+NEXT ELSE
