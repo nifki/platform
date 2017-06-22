@@ -1,34 +1,5 @@
 "use strict";
 
-function loadImagesThen(image_filenames, run) {
-    var counter = image_filenames.length;
-    var images = [];
-    
-    function count() {
-        counter -= 1;
-        if (counter == 0) {
-            run(images);
-        }
-    }
-    
-    for (var i=0; i<image_filenames.length; i++) {
-        var image = new Image();
-        image.onload = count;
-        image.src = image_filenames[i];
-        image.className = "pixelated";
-        images.push(image);
-    }
-}
-
-function onload() {
-    loadImagesThen(
-        ["man.png", "boulder.png"],
-        run
-    );
-}
-
-window.addEventListener("DOMContentLoaded", onload, false);
-
 var ctx = null;
 {
     var canvas = document.getElementById('game');
@@ -42,20 +13,6 @@ var ctx = null;
     }
 }
 
-function run(images) {
-    console.log("run()");
-    var state = {
-        "images": images,
-        "window": {
-            "r": 0, "g": 0, "b": 0,
-            "x": 0, "y": 0, "w": 256, "h": 256
-        }
-    };
-    if (ctx !== null) {
-        frame(state);
-    }
-}
-
 function rgb(r, g, b) {
     var R=255*r, G=255*g, B=255*b;
     if (R < 0) R = 0; else if (R > 255) R = 255;
@@ -64,8 +21,7 @@ function rgb(r, g, b) {
     return "rgb(" + R + "," + G + "," + B + ")";
 }
 
-function frame(state) {
-    console.log("frame()");
+function render(state) {
     ctx.save()
     var win = state.window;
     ctx.fillStyle = rgb(win.r, win.g, win.b);
@@ -77,3 +33,67 @@ function frame(state) {
     }
     ctx.restore()
 }
+
+function frame(state) {
+    console.log("frame()");
+    // Run the interpreter here.
+    state.window.r += 0.01;
+    var terminated = state.window.r >= 0.8;
+    if (terminated) {
+        // Nothing else to do. Stop the timer.
+        clearInterval(intervalId);
+    } else {
+        // Draw a frame and wait to be called again.
+        render(state);
+    }
+}
+
+var intervalId = null;
+
+function run(images, properties) {
+    console.log("run()");
+    var state = {
+        "images": images,
+        "window": {
+            "r": 0, "g": 0, "b": 0,
+            "x": 0, "y": 0, "w": properties.w, "h": properties.h
+        }
+    };
+    if (ctx !== null) {
+        intervalId = setInterval(frame, properties.msPerFrame, state)
+        frame(state);
+    }
+}
+
+function loadImagesThen(image_filenames, run) {
+    var counter = image_filenames.length;
+    var images = [];
+
+    function count() {
+        counter -= 1;
+        if (counter == 0) {
+            run(images);
+        }
+    }
+
+    for (var i=0; i<image_filenames.length; i++) {
+        var image = new Image();
+        image.onload = count;
+        image.src = image_filenames[i];
+        image.className = "pixelated";
+        images.push(image);
+    }
+}
+
+function onload() {
+    var properties = {
+        w: 256, h: 256,
+        msPerFrame: 40
+    }
+    loadImagesThen(
+        ["man.png", "boulder.png"],
+        function(images) { run(images, properties); }
+    );
+}
+
+window.addEventListener("DOMContentLoaded", onload, false);
