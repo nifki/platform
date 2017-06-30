@@ -38,23 +38,31 @@ function render(platform, state) {
 }
 
 function frame(platform, state) {
-    console.log("frame()");
     // Run the interpreter here.
-    state.window.r += 0.01;
-    var terminated = state.window.r >= 0.8;
-    if (terminated) {
-        // Nothing else to do. Stop the timer.
+    var terminated = false;
+    try {
+        state.window.r += 0.01;
+        if (state.window.r >= 0.8) {
+            throw "END";
+        }
+    } catch (e) {
+        // All exceptions are fatal. Stop the timer.
         clearInterval(platform.intervalId);
-    } else {
-        // Draw a frame and wait to be called again.
-        render(platform, state);
+        if (e === "END") {
+            return;
+        }
+        console.log(e);
+        throw e;
     }
+    // Draw a frame and wait to be called again.
+    render(platform, state);
 }
 
 function run(images, properties, canvasId) {
-    console.log("run()");
     var context2d = initCanvas(canvasId);
-    if (!context2d) throw "2D canvas is not available";
+    if (!context2d) {
+        throw "2D canvas is not available";
+    }
     var platform = {
         "context2d": context2d,
         "intervalId": null
@@ -89,7 +97,6 @@ function loadImagesThen(image_filenames, callback) {
         var image = new Image();
         image.onload = count;
         image.src = image_filenames[i];
-        image.className = "pixelated";
         images.push(image);
     }
 }
