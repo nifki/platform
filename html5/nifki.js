@@ -58,7 +58,7 @@ function frame(platform, state) {
     render(platform, state);
 }
 
-function run(images, properties, canvasId) {
+function run(instructions, images, properties, canvasId) {
     var context2d = initCanvas(canvasId);
     if (!context2d) {
         throw "2D canvas is not available";
@@ -82,8 +82,8 @@ function run(images, properties, canvasId) {
     );
 }
 
-function loadImagesThen(image_filenames, callback) {
-    var counter = image_filenames.length;
+function loadImagesThen(imageFilenames, callback) {
+    var counter = imageFilenames.length;
     var images = [];
 
     function count() {
@@ -93,10 +93,10 @@ function loadImagesThen(image_filenames, callback) {
         }
     }
 
-    for (var i=0; i < image_filenames.length; i++) {
+    for (var i=0; i < imageFilenames.length; i++) {
         var image = new Image();
         image.onload = count;
-        image.src = image_filenames[i];
+        image.src = imageFilenames[i];
         images.push(image);
     }
 }
@@ -105,7 +105,12 @@ function onload() {
     loadImagesThen(
         ["man.png", "boulder.png"],
         function(images) {
-            run(images, {"w": 256, "h": 256, "msPerFrame": 40}, "game");
+            run(
+                assemble("END"),
+                images,
+                {"w": 256, "h": 256, "msPerFrame": 40},
+                "game",
+            );
         }
     );
 }
