@@ -7,10 +7,13 @@ function initCanvas(canvasId) {
     if (!canvas.getContext) return null;
     var ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.mozImageSmoothingEnabled = false;
-    ctx.webkitImageSmoothingEnabled = false;
-    ctx.msImageSmoothingEnabled = false;
-    ctx.imageSmoothingEnabled = false;
+    if (typeof ctx.imageSmoothingEnabled !== "undefined") {
+        ctx.imageSmoothingEnabled = false;
+    } else {
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+    }
     ctx.scale(canvas.width, canvas.height);
     return ctx;
 }
