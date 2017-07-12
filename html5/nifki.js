@@ -1,4 +1,4 @@
-"use strict";
+(function(){"use strict";
 
 /** Returns a 2D drawing context (a CanvasRenderingContext2D) for rendering
  * the graphics. */
@@ -109,10 +109,12 @@ function onload() {
                 assemble("END"),
                 images,
                 {"w": 256, "h": 256, "msPerFrame": 40},
-                "game",
+                "game"
             );
         }
     );
 }
 
 window.addEventListener("DOMContentLoaded", onload, false);
+
+})(); // "use strict"

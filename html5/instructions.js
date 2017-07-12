@@ -5,13 +5,17 @@
  *   - pushes - the number of stack items created.
  */
 
-var assemble = function() {
+var assemble;
+
+(function(){"use strict";
+
+assemble = function() {
     var STOP_WORDS = {
         "THEN": null,
         "WHILE": null,
         "NEXT": null,
         "ELSE": null
-    }
+    };
 
     function makeOp(func, pops, pushes) {
         func.pops = pops;
@@ -120,7 +124,7 @@ var assemble = function() {
             }
         }
 
-        var instructions = []
+        var instructions = [];
         var instructionsFilled = 0;
 
         /** Appends a placeholder to `instructions` and returns a
@@ -135,7 +139,7 @@ var assemble = function() {
                 }
                 instructions[slotIndex] = instruction;
                 instructionsFilled++;
-            }
+            };
         }
 
         /** Fills in the next instruction.
@@ -199,17 +203,18 @@ var assemble = function() {
                         }
                         var op = wordMatch[5];
                         var name = wordMatch[6];
+                        var index;
                         if (op === "LOAD") {
-                            var index = getGlobalIndex(name);
+                            index = getGlobalIndex(name);
                             appendAndUpdateSP(LOAD(index, name));
                         } else if (op === "STORE") {
-                            var index = getGlobalIndex(name);
+                            index = getGlobalIndex(name);
                             appendAndUpdateSP(STORE(index, name));
                         } else if (op === "LLOAD") {
-                            var index = getLocalIndex(name);
+                            index = getLocalIndex(name);
                             appendAndUpdateSP(LLOAD(index, name));
                         } else if (op === "LSTORE") {
-                            var index = getLocalIndex(name);
+                            index = getLocalIndex(name);
                             appendAndUpdateSP(LSTORE(index, name));
                         } else if (op === "SET") {
                             appendAndUpdateSP(SET(name));
@@ -554,3 +559,5 @@ assemble(
     '  WAIT ;\n' +
     'NEXT ; ELSE ;'
 );
+
+})(); // "use strict"
