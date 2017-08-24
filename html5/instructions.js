@@ -7,6 +7,12 @@
  *   - pushes - the number of stack items created.
  */
 
+function decodeString(source) {
+    // FIXME
+    return source;
+}
+
+
 var assemble = function() {
     var STOP_WORDS = {
         "THEN": null,
@@ -30,6 +36,20 @@ var assemble = function() {
             0
         )
     };
+
+    /**
+     * @param {object} value - the value to push on the stack (see
+     * "value.txt").
+     */
+    function CONSTANT(value) {
+        return makeOp(
+            function CONSTANT(state) {
+                // TODO
+            },
+            0,
+            1
+        );
+    }
 
     function LOAD(index, name) {
         return makeOp(
@@ -81,18 +101,19 @@ var assemble = function() {
         );
     }
 
-    var numGlobals = 0;
-    var globalMappings = {};
-
-    function getGlobalIndex(name) {
-        if (!(name in globalMappings)) {
-            globalMappings[name] = numGlobals;
-            numGlobals++;
-        }
-        return globalMappings[name];
-    }
-
     function assemble(source) {
+        console.log("assemble()");
+
+        var lineNum = 1;
+
+        function syntaxException(message) {
+            return "SyntaxException: " + message + " at line " + lineNum;
+        }
+
+        /** Matches and classifies a single instruction (or newline or
+         * comment). Everything except whitespace will be matched.
+         * Note: Javascript RegExps have state; we need a fresh one.
+         */
         var wordRegExp = new RegExp(
             "(\n|#[^\n]*\n?)" + "|" +
             "\"([^\"]*)(\"?)" + "|" +
@@ -101,9 +122,11 @@ var assemble = function() {
             "[^\t\n\r ]+",
             "g"
         );
-        var lineNum = 1;
         var wordMatch; // Next match object from `wordRegExp`.
         var word; // Equal to `wordMatch[0]`, except when null.
+
+        /** Moves on to the next instruction.
+         */
         function next() {
             while (true) {
                 var m = wordRegExp.exec(source);
@@ -118,8 +141,22 @@ var assemble = function() {
                     word = null;
                 }
                 wordMatch = m;
+                console.log("next()");
                 return;
             }
+        }
+
+        next(); // Initialise `word` and `wordMatch()`.
+
+        var globalMappings = {};
+        var globalValues = [];
+
+        function getGlobalIndex(name) {
+            if (!(name in globalMappings)) {
+                globalMappings[name] = globalValues.length;
+                globalValues.push(null);
+            }
+            return globalMappings[name];
         }
 
         var instructions = [];
@@ -133,7 +170,8 @@ var assemble = function() {
             instructions.push(null);
             return function(instruction) {
                 if (instructions[slotIndex] !== null) {
-                    throw "This slot has already been filled";
+                    throw syntaxException(
+                        "This slot has already been filled");
                 }
                 instructions[slotIndex] = instruction;
                 instructionsFilled++;
@@ -148,6 +186,8 @@ var assemble = function() {
         }
 
         function parseFunctionBody(entrySP, exitSP, originalName) {
+            console.log("parseFunctionBody(" + originalName + ")");
+
             var localMappings = {};
             var numLocals = 0;
 
@@ -160,11 +200,11 @@ var assemble = function() {
             }
 
             function parseBlock(numLoops) {
-                var sp = entrySp;
+                var sp = entrySP;
                 function appendAndUpdateSP(instruction) {
                     sp -= instruction.pops;
                     if (sp < 0) {
-                        throw "Stack underflow";
+                        throw syntaxException("Stack underflow");
                     }
                     sp += instruction.pushes;
                     append(instruction);
@@ -174,30 +214,33 @@ var assemble = function() {
                     !(word in STOP_WORDS) &&
                     !word.startsWith("DEF(")
                 ) {
+                    console.log(word);
                     var instruction = null;
                     // TODO: "IF", "LOOP", "FOR", "BREAK", "RETURN", "ERROR".
                     if (typeof wordMatch[2] !== "undefined") {
                         // String literal.
                         if (typeof wordMatch[3] === "undefined") {
-                            throw "Unclosed string literal: " + m[0];
+                            throw syntaxException(
+                                "Unclosed string literal: " + wordMatch[0]);
                         }
-                        appendAndUpdateSP(constant({
+                        appendAndUpdateSP(CONSTANT({
                             "type": "string",
-                            "value": word
+                            "value": decodeString(wordMatch[2])
                         }));
                     } else if (typeof wordMatch[4] !== "undefined") {
                         // Number literal.
-                        var value = +word;
+                        var value = +wordMatch[4];
                         if (value !== value) {
-                            throw "Not a number";
+                            throw syntaxException("Not a number");
                         }
-                        appendAndUpdateSP(constant({
+                        appendAndUpdateSP(CONSTANT({
                             "type": "number",
                             "value": value
                         }));
                     } else if (typeof wordMatch[5] !== "undefined") {
                         if (typeof wordMatch[7] === "undefined") {
-                            throw "Missing ')' in " + word;
+                            throw syntaxException(
+                                "Missing ')' in " + word);
                         }
                         var op = wordMatch[5];
                         var name = wordMatch[6];
@@ -217,32 +260,44 @@ var assemble = function() {
                         } else if (op === "SET") {
                             appendAndUpdateSP(SET(name));
                         } else {
-                            throw "Unknown instruction: " + word;
+                            throw syntaxException(
+                                "Unknown instruction: " + word);
                         }
                     } else if (word === ";") {
                         if (sp !== 0) {
-                            throw "Stack should be empty before executing ;";
+                            throw syntaxException(
+                                "Stack should be empty before executing ;");
                         }
                     } else {
                         if (!(word in OPS)) {
-                            throw "Unknown instruction: " + word;
+                            throw syntaxException(
+                                "Unknown instruction: " + word);
                         }
                         appendAndUpdateSP(OPS[word]);
                     }
                     next();
                 }
+                if (sp != exitSP) {
+                    throw syntaxException(
+                        "Stack contains " + sp +
+                        " items; should be " + exitSP
+                    );
+                }
             }
 
             if (instructionsFilled !== instructions.length) {
-                throw "Used != Filled";
+                throw syntaxException(
+                    "Used != Filled");
             }
             var startPC = instructions.length;
             parseBlock(0);
             if (instructionsFilled !== instructions.length) {
-                throw "Used != Filled";
+                throw syntaxException(
+                    "Used != Filled");
             }
             var endPC = instructions.length;
             // TODO: Do we need to compute `stackLen`?
+            // Return a function value (see "value.txt").
             return {
                 "type": "function",
                 "startPC": startPC,
@@ -250,6 +305,34 @@ var assemble = function() {
                 "originalName": originalName
             };
         }
+
+        // Parse the main program.
+        var main = parseFunctionBody(0, 0, "<main>");
+        append(OPS.END);
+        // Parse the function definitions.
+        while (word !== null) {
+            console.log(word);
+            if (typeof wordMatch[5] === "undefined" ||
+                wordMatch[5] !== "DEF"
+            ) {
+                throw syntaxException(
+                    "Expected DEF(name)");
+            }
+            if (typeof wordMatch[7] === "undefined") {
+                throw syntaxException(
+                    "Missing ')' in " + word);
+            }
+            var name = wordMatch[6];
+            next();
+            var value = parseFunctionBody(1, -1, name);
+            // Was `defineFunction()` in Java:
+            var index = getGlobalIndex(name);
+            globalValues[index] = value;
+        }
+
+        return { // TODO: Add more.
+            "main": main
+        };
     }
 
     return assemble;
