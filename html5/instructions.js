@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * An "instruction" is a Javascript function that takes an interpreter state,
  * mutates it in place, and returns nothing. It also has public fields:
@@ -5,11 +7,7 @@
  *   - pushes - the number of stack items created.
  */
 
-var assemble;
-
-(function(){"use strict";
-
-assemble = function() {
+var assemble = function() {
     var STOP_WORDS = {
         "THEN": null,
         "WHILE": null,
@@ -559,5 +557,3 @@ assemble(
     '  WAIT ;\n' +
     'NEXT ; ELSE ;'
 );
-
-})(); // "use strict"

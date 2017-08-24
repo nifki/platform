@@ -1,4 +1,4 @@
-(function(){"use strict";
+"use strict";
 
 /** Returns a 2D drawing context (a CanvasRenderingContext2D) for rendering
  * the graphics. */
@@ -119,5 +119,3 @@ function onload() {
 }
 
 window.addEventListener("DOMContentLoaded", onload, false);
-
-})(); // "use strict"
