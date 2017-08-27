@@ -1,8 +1,0 @@
-Nifki values are Javascript objects with a "type" field of type String and a
-"value" field whose type depends on the type. It is the equivalent of the Java
-type "org.sc3d.apt.crazon.vm.state.Value". The allowed values for the "type"
-field are exactly as returned by "describeType()" in the Java version, e.g.
-"number", "string".
-
-TODO: Write constructor functions for each type and use them everywhere. Take the opportunity to check invariants.
-

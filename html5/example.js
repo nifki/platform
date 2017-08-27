@@ -1,3 +1,3 @@
 var TEST_CODE = (
-'"HELLO WORLD" DUMP'
+'2 2 + DUMP'
 );

@@ -28,14 +28,31 @@ var assemble = function() {
     }
 
     var OPS = {
+        "+": makeOp(
+            function ADD(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type === "number" && y.type === "number") {
+                    state.frame.stack.push(newNumber(x.v + y.v));
+                } else if (x.type === "string" && y.type === "string") {
+                    state.frame.stack.push(newString(x.v + y.v));
+                } else if (x.type === "table" && y.type === "table") {
+                    throw "NotImplemented: table addition";  // TODO
+                } else {
+                    throw "Cannot add "+x+" to "+y;
+                }
+            },
+            2,
+            1
+        ),
         "DUMP": makeOp(
             function DUMP(state) {
                 var value = state.frame.stack.pop();
                 if (value.type === "string") {
                     // TODO: SSString.encode equivalent.
-                    console.log("DUMP: " + value.value);
+                    console.log("DUMP: " + value.v);
                 } else if (value.type === "number") {
-                    console.log("DUMP: " + value.value);
+                    console.log("DUMP: " + value.v);
                 } else {
                     console.log("TODO: DUMP <" + value.type + ">");
                 }
@@ -240,7 +257,7 @@ var assemble = function() {
                         }
                         appendAndUpdateSP(CONSTANT({
                             "type": "string",
-                            "value": decodeString(wordMatch[2])
+                            "v": decodeString(wordMatch[2])
                         }));
                     } else if (typeof wordMatch[4] !== "undefined") {
                         // Number literal.
@@ -250,7 +267,7 @@ var assemble = function() {
                         }
                         appendAndUpdateSP(CONSTANT({
                             "type": "number",
-                            "value": value
+                            "v": value
                         }));
                     } else if (typeof wordMatch[5] !== "undefined") {
                         if (wordMatch[7] === "") {
@@ -311,14 +328,8 @@ var assemble = function() {
                     "Used != Filled");
             }
             var endPC = instructions.length;
-            // TODO: Do we need to compute `stackLen`?
-            // Return a function value (see "value.txt").
-            return {
-                "type": "function",
-                "startPC": startPC,
-                "numLocals": numLocals,
-                "originalName": originalName
-            };
+            // TODO: Do we need `numLocals`?
+            return newFunction(startPC, numLocals, originalName);
         }
 
         // Parse the main program.
