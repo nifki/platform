@@ -131,7 +131,7 @@ var assemble = function() {
                 while (
                     word !== null &&
                     !(word in STOP_WORDS) &&
-                    !word.startsWith("DEF(")
+                    wordMatch[5] !== "DEF"
                 ) {
                     console.log(word);
                     var instruction = null;
@@ -225,9 +225,7 @@ var assemble = function() {
         // Parse the function definitions.
         while (word !== null) {
             console.log(word);
-            if (typeof wordMatch[5] === "undefined" ||
-                wordMatch[5] !== "DEF"
-            ) {
+            if (wordMatch[5] !== "DEF") {
                 throw syntaxException(
                     "Expected DEF(name)");
             }
