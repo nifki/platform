@@ -115,11 +115,11 @@ var assemble = function() {
          * Note: Javascript RegExps have state; we need a fresh one.
          */
         var wordRegExp = new RegExp(
-            "(\n|#[^\n]*\n?)" + "|" +
+            "(\\n|#[^\\n]*\\n?)" + "|" +
             "\"([^\"]*)(\"?)" + "|" +
-            "([0-9][^\t\n\r ]*)" + "|" +
-            "([^\(\t\n\r ]+)\(([^\)\t\n\r ]*)(\)?)" + "|" +
-            "[^\t\n\r ]+",
+            "([0-9][^\\t\\n\\r ]*)" + "|" +
+            "([^\\(\\t\\n\\r ]+)\\(([^\\)\\t\\n\\r ]*)(\\)?)" + "|" +
+            "[^\\t\\n\\r ]+",
             "g"
         );
         var wordMatch; // Next match object from `wordRegExp`.
