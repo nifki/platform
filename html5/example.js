@@ -1,0 +1,3 @@
+var TEST_CODE = (
+'"HELLO WORLD" DUMP'
+);

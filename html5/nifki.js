@@ -26,8 +26,8 @@ function rgb(r, g, b) {
     return "rgb(" + R + "," + G + "," + B + ")";
 }
 
-function render(platform, state) {
-    var ctx = platform.context2d;
+function render(state) {
+    var ctx = state.platform.context2d;
     ctx.save();
     var win = state.window;
     ctx.fillStyle = rgb(win.r, win.g, win.b);
@@ -40,17 +40,15 @@ function render(platform, state) {
     ctx.restore();
 }
 
-function frame(platform, state) {
+function doFrame(state) {
     // Run the interpreter here.
-    var terminated = false;
     try {
-        state.window.r += 0.01;
-        if (state.window.r >= 0.8) {
-            throw "END";
+        while (true) {
+            state.instructions[state.frame.pc++](state);
         }
     } catch (e) {
         // All exceptions are fatal. Stop the timer.
-        clearInterval(platform.intervalId);
+        clearInterval(state.platform.intervalId);
         if (e === "END") {
             return;
         }
@@ -58,29 +56,31 @@ function frame(platform, state) {
         throw e;
     }
     // Draw a frame and wait to be called again.
-    render(platform, state);
+    render(state);
 }
 
-function run(instructions, images, properties, canvasId) {
+function run(code, images, properties, canvasId) {
     var context2d = initCanvas(canvasId);
     if (!context2d) {
         throw "2D canvas is not available";
     }
-    var platform = {
-        "context2d": context2d,
-        "intervalId": null
-    };
     var state = {
+        "instructions": code.instructions,
         "images": images,
+        "platform": {
+            "context2d": context2d,
+            "intervalId": null
+        },
         "window": {
             "r": 0, "g": 0, "b": 0,
-            "x": 0, "y": 0, "w": properties.w, "h": properties.h
-        }
+            "x": 0, "y": 0,
+            "w": properties.w, "h": properties.h
+        },
+        "frame": newStackFrame(code.main, null)
     };
-    platform.intervalId = setInterval(
-        frame,
+    state.platform.intervalId = setInterval(
+        doFrame,
         properties.msPerFrame,
-        platform,
         state
     );
 }
@@ -109,7 +109,7 @@ function onload() {
         ["man.png", "boulder.png"],
         function(images) {
             run(
-                assemble("END"),
+                assemble(TEST_CODE),
                 images,
                 {"w": 256, "h": 256, "msPerFrame": 40},
                 "game"
