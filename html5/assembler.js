@@ -66,7 +66,6 @@ var assemble = function() {
                     word = null;
                 }
                 wordMatch = m;
-                console.log("next()");
                 return;
             }
         }
@@ -139,7 +138,6 @@ var assemble = function() {
                     !(word in STOP_WORDS) &&
                     wordMatch[5] !== "DEF"
                 ) {
-                    console.log(word);
                     var instruction = null;
                     // TODO: "IF", "LOOP", "FOR", "BREAK", "RETURN", "ERROR".
                     if (typeof wordMatch[2] !== "undefined") {

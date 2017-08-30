@@ -25,7 +25,7 @@ var SET;
                 } else if (x.type === "table" && y.type === "table") {
                     throw "NotImplemented: table addition";  // TODO
                 } else {
-                    throw "Cannot add "+x+" to "+y;
+                    throw "Cannot add " + x.type + " to " + y.type;
                 }
             },
             2,
@@ -49,6 +49,43 @@ var SET;
             },
             0,
             0
+        ),
+        "GET": makeOp(
+            function GET(state) {
+                var k = state.frame.stack.pop();
+                var t = state.frame.stack.pop();
+                var ans;
+                if (t.type === "string") {
+                    if (k.type !== "number") {
+                        throw "Cannot subscript " + t.type + " by " + k.type;
+                    }
+                    if (k.v % 1 !== 0) {
+                        throw (
+                            "String subscript must be an integer, not " +
+                            k.v
+                        );
+                    }
+                    ans = newString(t.v.substring(k.v, k.v + 1));
+                } else if (t.type === "table") {
+                    throw "NotImplemented: table GET"; // TODO.
+                } else if (t.type === "object") {
+                    if (k.type !== "string") {
+                        throw "Cannot subscript " + t.type + " by " + k.type;
+                    }
+                    ans = t.v[k.v];
+                } else {
+                    throw "Cannot subscript " + t.type;
+                }
+                if (typeof ans === "undefined") {
+                    throw (
+                        valueToString(t) + "[" + valueToString(k) + "]" +
+                        " is not defined"
+                    );
+                }
+                state.frame.stack.push(ans);
+            },
+            2,
+            1
         ),
         "WAIT": makeOp(
             function WAIT(state) {
