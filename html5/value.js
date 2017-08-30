@@ -7,14 +7,16 @@
  */
 
 function newNumber(v) {
-    if (typeof v !== "number" || !isFinite(v))
+    if (typeof v !== "number" || !isFinite(v)) {
         throw "IllegalArgumentException: " + v;
+    }
     return {"type": "number", "v": v};
 }
 
 function newString(v) {
-    if (typeof v !== "string")
+    if (typeof v !== "string") {
         throw "IllegalArgumentException: " + v;
+    }
     return {"type": "string", "v": v};
 }
 
@@ -25,4 +27,58 @@ function newFunction(startPC, numLocals, originalName) {
         "numLocals": numLocals,
         "originalName": originalName
     };
+}
+
+var newObject = (function() {
+    var objCount = 0;
+
+    function newObject(objType, v) {
+        if (typeof v !== "object") {
+            throw "IllegalArgumentException: " + v;
+        }
+        return {
+            "type": "object",
+            "objType": objType,
+            "objNum": objCount++,
+            "v": v
+        };
+    }
+
+    return newObject;
+})();
+
+function valueToString(value) {
+    var v = value.v;
+    if (value.type === "number") {
+        return "" + v;
+    } else if (value.type === "string") {
+        // TODO: SSString.encode equivalent.
+        return v;
+    } else if (value.type === "func") {
+        return value.originalName;
+    } else if (value.type === "object") {
+        return value.objType + ":" + value.objNum;
+    } else {
+        return "<TODO: valueToString " + value.type + ">";
+    }
+}
+
+function valueToLongString(value) {
+    var v = value.v;
+    var ans, sep;
+    if (value.type === "table") {
+        return "<TODO: valueToLongString " + value.type + ">";
+    } else if (value.type === "object") {
+        ans = valueToString(value) + "(";
+        sep = "";
+        for (var key in v) {
+            if (v.hasOwnProperty(key)) {
+                ans += sep + key + "=" + valueToString(v[key]);
+                sep = ", ";
+            }
+        }
+        return ans + ")";
+    } else {
+        return valueToString(value);
+    }
 }
