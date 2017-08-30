@@ -243,6 +243,8 @@ var assemble = function() {
 
         return { // TODO: Add more.
             "instructions": instructions,
+            "globalMappings": globalMappings,
+            "globalValues": globalValues,
             "main": main
         };
     }

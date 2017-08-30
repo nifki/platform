@@ -66,6 +66,7 @@ function run(code, images, properties, canvasId) {
     }
     var state = {
         "instructions": code.instructions,
+        "globalValues": code.globalValues,
         "images": images,
         "platform": {
             "context2d": context2d,
