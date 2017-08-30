@@ -87,6 +87,22 @@ var SET;
             2,
             1
         ),
+        "NEG": makeOp(
+            function NEG(state) {
+                var x = state.frame.stack.pop();
+                if (x.type === "number") {
+                    state.frame.stack.push(newNumber(-x.v));
+                } else if (x.type === "string") {
+                    // TODO: Proper unicode.
+                    state.frame.stack.push(
+                        newString(x.v.split("").reverse().join("")));
+                } else {
+                    throw "Cannot negate " + x.type;
+                }
+            },
+            1,
+            1
+        ),
         "WAIT": makeOp(
             function WAIT(state) {
                 throw "WAIT";
