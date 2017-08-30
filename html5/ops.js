@@ -35,12 +35,9 @@ var SET;
             function DUMP(state) {
                 var value = state.frame.stack.pop();
                 if (value.type === "string") {
-                    // TODO: SSString.encode equivalent.
-                    console.log("DUMP: " + value.v);
-                } else if (value.type === "number") {
                     console.log("DUMP: " + value.v);
                 } else {
-                    console.log("TODO: DUMP <" + value.type + ">");
+                    console.log("DUMP: " + valueToLongString(value));
                 }
             },
             1,
@@ -52,6 +49,20 @@ var SET;
             },
             0,
             0
+        ),
+        "WAIT": makeOp(
+            function WAIT(state) {
+                throw "WAIT";
+            },
+            0,
+            0
+        ),
+        "WINDOW": makeOp(
+            function WINDOW(state) {
+                state.frame.stack.push(state.window);
+            },
+            0,
+            1
         )
     };
 

@@ -30,10 +30,10 @@ function render(state) {
     var ctx = state.platform.context2d;
     ctx.save();
     var win = state.window;
-    ctx.fillStyle = rgb(win.r, win.g, win.b);
+    ctx.fillStyle = rgb(win.R.v, win.G.v, win.B.v);
     ctx.fillRect(0.0, 0.0, 1.0, 1.0);
-    ctx.scale(1.0/win.w, 1.0/win.h);
-    ctx.translate(-win.x, -win.y);
+    ctx.scale(1.0/win.W.v, 1.0/win.H.v);
+    ctx.translate(-win.X.v, -win.Y.v);
     for (var i=0; i < state.images.length; i++) {
         ctx.drawImage(state.images[i], 32*i, 32*i);
     }
@@ -41,22 +41,25 @@ function render(state) {
 }
 
 function doFrame(state) {
+    var instructions = state.instructions;
     // Run the interpreter here.
     try {
         while (true) {
-            state.instructions[state.frame.pc++](state);
+            instructions[state.frame.pc++](state);
         }
     } catch (e) {
         // All exceptions are fatal. Stop the timer.
         clearInterval(state.platform.intervalId);
         if (e === "END") {
             return;
+        } else if (e === "WAIT") {
+            // Draw a frame and wait to be called again.
+            render(state);
+            return;
         }
         console.log(e);
         throw e;
     }
-    // Draw a frame and wait to be called again.
-    render(state);
 }
 
 function run(code, images, properties, canvasId) {
@@ -72,11 +75,16 @@ function run(code, images, properties, canvasId) {
             "context2d": context2d,
             "intervalId": null
         },
-        "window": {
-            "r": 0, "g": 0, "b": 0,
-            "x": 0, "y": 0,
-            "w": properties.w, "h": properties.h
-        },
+        "window": newObject("WINDOW", {
+            "X": newNumber(0),
+            "Y": newNumber(0),
+            "W": newNumber(properties.w),
+            "H": newNumber(properties.h),
+            "R": newNumber(0),
+            "G": newNumber(0),
+            "B": newNumber(0)
+            // "IsVisible": TODO
+        }),
         "frame": newStackFrame(code.main, null)
     };
     state.platform.intervalId = setInterval(

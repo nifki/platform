@@ -1,5 +1,6 @@
 var TEST_CODE = (
-    '2 LSTORE(x) ; ' +
-    '1 LSTORE(y) ; ' +
-    'LLOAD(x) LLOAD(x) + DUMP ;'
+    '1 DUMP ; ' +
+    '"Hello" DUMP ; ' +
+    'WINDOW DUMP # 0.01 + WINDOW SET(R) ; ' +
+    'WAIT ; '
 );
