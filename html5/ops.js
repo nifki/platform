@@ -72,7 +72,7 @@ var SET;
     LOAD = function LOAD(index, name) {
         return makeOp(
             function LOAD(state) {
-                state.frame.stack.push(state.globalValues[index]);
+                state.frame.stack.push(state.globals[index]);
             },
             0,
             1
@@ -82,7 +82,7 @@ var SET;
     STORE = function STORE(index, name) {
         return makeOp(
             function STORE(state) {
-                state.globalValues[index] = state.frame.stack.pop();
+                state.globals[index] = state.frame.stack.pop();
             },
             1,
             0
@@ -92,7 +92,8 @@ var SET;
     LLOAD = function LLOAD(index, name) {
         return makeOp(
             function LLOAD(state) {
-                throw "NotImplemented: LLOAD";
+                state.frame.stack.push(
+                    state.frame.locals[index]);
             },
             0,
             1
@@ -102,7 +103,7 @@ var SET;
     LSTORE = function LSTORE(index, name) {
         return makeOp(
             function LSTORE(state) {
-                throw "NotImplemented: LSTORE";
+                state.frame.locals[index] = state.frame.stack.pop();
             },
             1,
             0

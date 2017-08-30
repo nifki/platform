@@ -1,3 +1,5 @@
 var TEST_CODE = (
-'2 STORE(Page_x) 1 STORE(Page_y) LOAD(Page_x) LOAD(Page_x) + DUMP'
+    '2 LSTORE(x) ; ' +
+    '1 LSTORE(y) ; ' +
+    'LLOAD(x) LLOAD(x) + DUMP ;'
 );
