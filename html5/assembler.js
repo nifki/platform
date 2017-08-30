@@ -37,7 +37,13 @@ var assemble = function() {
             "(\\n|#[^\\n]*\\n?)" + "|" +
             "\"([^\"]*)(\"?)" + "|" +
             "([0-9][^\\t\\n\\r ]*)" + "|" +
-            "([^\\(\\t\\n\\r ]+)\\(([^\\)\\t\\n\\r ]*)(\\)?)" + "|" +
+            (
+                "([^\\(\\t\\n\\r ]+)" +
+                "\\(" +
+                "([^\\)\\t\\n\\r ]*)" +
+                "\\)" +
+                "(?![^\\t\\n\\r ])"
+            ) + "|" +
             "[^\\t\\n\\r ]+",
             "g"
         );
@@ -157,10 +163,6 @@ var assemble = function() {
                             "v": value
                         }));
                     } else if (typeof wordMatch[5] !== "undefined") {
-                        if (wordMatch[7] === "") {
-                            throw syntaxException(
-                                "Missing ')' in " + word);
-                        }
                         var op = wordMatch[5];
                         var name = wordMatch[6];
                         var index;
@@ -228,10 +230,6 @@ var assemble = function() {
             if (wordMatch[5] !== "DEF") {
                 throw syntaxException(
                     "Expected DEF(name)");
-            }
-            if (typeof wordMatch[7] === "undefined") {
-                throw syntaxException(
-                    "Missing ')' in " + word);
             }
             var name = wordMatch[6];
             next();
