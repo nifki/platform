@@ -19,7 +19,7 @@ function initCanvas(canvasId) {
 }
 
 function rgb(r, g, b) {
-    var R=255*r, G=255*g, B=255*b;
+    var R = Math.round(255*r), G = Math.round(255*g), B = Math.round(255*b);
     if (R < 0) R = 0; else if (R > 255) R = 255;
     if (G < 0) G = 0; else if (G > 255) G = 255;
     if (B < 0) B = 0; else if (B > 255) B = 255;
@@ -29,7 +29,7 @@ function rgb(r, g, b) {
 function render(state) {
     var ctx = state.platform.context2d;
     ctx.save();
-    var win = state.window;
+    var win = state.window.v;
     ctx.fillStyle = rgb(win.R.v, win.G.v, win.B.v);
     ctx.fillRect(0.0, 0.0, 1.0, 1.0);
     ctx.scale(1.0/win.W.v, 1.0/win.H.v);
@@ -48,15 +48,18 @@ function doFrame(state) {
             instructions[state.frame.pc++](state);
         }
     } catch (e) {
-        // All exceptions are fatal. Stop the timer.
-        clearInterval(state.platform.intervalId);
-        if (e === "END") {
-            return;
-        } else if (e === "WAIT") {
+        if (e === "WAIT") {
             // Draw a frame and wait to be called again.
             render(state);
             return;
         }
+        // All other exceptions are fatal. Stop the timer.
+        clearInterval(state.platform.intervalId);
+        if (e === "END") {
+            // Normal exit.
+            return;
+        }
+        // Show the error to the user.
         console.log(e);
         throw e;
     }
