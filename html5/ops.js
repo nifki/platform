@@ -177,7 +177,22 @@ var SET;
     SET = function SET(name) {
         return makeOp(
             function SET(state) {
-                throw "NotImplemented: SET";
+                var v = state.frame.stack.pop();
+                var o = state.frame.stack.pop();
+                if (typeof o !== "object") {
+                    throw (
+                        "Cannot apply SET to " + o.type +
+                        "; an object is required"
+                    );
+                }
+                var old = o.v[name];
+                if (typeof old !== typeof v) {
+                    throw (
+                        "SET " + o.objType + "." + name +
+                        " = " + v.type
+                    );
+                }
+                o.v[name] = v;
             },
             2,
             0
