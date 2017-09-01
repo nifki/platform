@@ -3,6 +3,7 @@ var CONSTANT;
 var IF;
 var LLOAD;
 var LOAD;
+var LOOP;
 var LSTORE;
 var SET;
 var STORE;
@@ -27,6 +28,22 @@ var STORE;
                     throw "NotImplemented: table addition";  // TODO
                 } else {
                     throw "Cannot add " + x.type + " to " + y.type;
+                }
+            },
+            2,
+            1
+        ),
+        // TODO: Other comparators.
+        "<": makeOp(
+            function LT(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                // TODO: full compareTo implementation
+                if (x.type === "number" && y.type === "number") {
+                    state.frame.stack.push(
+                        x.v < y.v ? VALUE_TRUE : VALUE_FALSE);
+                } else {
+                    throw "Cannot compare " + x.type + " and " + y.type;
                 }
             },
             2,
@@ -111,6 +128,13 @@ var STORE;
             1,
             1
         ),
+        "NEXT": makeOp(
+            function NEXT(state) {
+                state.frame.loop.next(state);
+            },
+            0,
+            0
+        ),
         "TRUE": makeOp(
             function TRUE(state) {
                 state.frame.stack.push(VALUE_TRUE);
@@ -123,6 +147,23 @@ var STORE;
                 throw "WAIT";
             },
             0,
+            0
+        ),
+        "WHILE": makeOp(
+            function WHILE(state) {
+                var cond = state.frame.stack.pop();
+                if (cond.type !== "boolean") {
+                    throw (
+                        "Cannot execute WHILE " + cond.type +
+                        "; a boolean is required"
+                    );
+                }
+                if (cond.v === false) {
+                    state.frame.pc = state.frame.loop.elsePC;
+                    state.frame.loop = state.frame.loop.enclosing;
+                }
+            },
+            1,
             0
         ),
         "WINDOW": makeOp(
@@ -192,6 +233,25 @@ var STORE;
             },
             0,
             1
+        );
+    };
+
+    /** The beginning of a "LOOP ... WHILE ... NEXT ... ELSE" structure. */
+    LOOP = function LOOP(loopPC, elsePC, breakPC) {
+        return makeOp(
+            function LOOP(state) {
+                state.frame.loop = {
+                    "loopPC": loopPC,
+                    "elsePC": elsePC,
+                    "breakPC": breakPC,
+                    "enclosing": state.frame.loop,
+                    "next": function NEXT(state) {
+                        state.frame.pc = loopPC;
+                    }
+                };
+            },
+            0,
+            0
         );
     };
 

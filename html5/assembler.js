@@ -119,7 +119,7 @@ var assemble = function() {
             allocate()(instruction);
         }
 
-        function parseFunctionBody(entrySP, exitSP, originalName) {
+        function parseFunctionBody(funcEntrySP, funcExitSP, originalName) {
             console.log("parseFunctionBody(" + originalName + ")");
 
             var localMappings = {};
@@ -133,7 +133,7 @@ var assemble = function() {
                 return localMappings[name];
             }
 
-            function parseBlock(numLoops) {
+            function parseBlock(entrySP, exitSP, numLoops) {
                 var sp = entrySP;
                 function appendAndUpdateSP(instruction) {
                     sp -= instruction.pops;
@@ -149,7 +149,7 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    // TODO: "LOOP", "FOR", "BREAK", "RETURN", "ERROR".
+                    // TODO: "FOR", "BREAK", "RETURN", "ERROR".
                     if (word === "IF") {
                         if (sp != 1) {
                             throw syntaxException(
@@ -161,16 +161,41 @@ var assemble = function() {
                         next();
                         sp--;
                         // Parse the "THEN" block.
-                        parseBlock(0, 0, numLoops, localMappings);
+                        parseBlock(0, 0, numLoops);
                         expect("THEN");
                         var thenSlot = allocate();
                         var elsePC = instructions.length;
                         // Parse the "ELSE" block.
-                        parseBlock(0, 0, numLoops, localMappings);
+                        parseBlock(0, 0, numLoops);
                         expect("ELSE");
                         var endPC = instructions.length;
                         ifSlot(IF(elsePC));
                         thenSlot(GOTO(endPC));
+                    } else if (word === "LOOP") {
+                        if (sp != 0) {
+                            throw syntaxException(
+                                "Stack should be empty before executing LOOP"
+                            );
+                        }
+                        next();
+                        var slot = allocate();
+                        var loopPC = instructions.length;
+                        // Parse the condition.
+                        parseBlock(0, 1, numLoops + 1);
+                        sp++;
+                        expect("WHILE");
+                        append(OPS.WHILE);
+                        sp--;
+                        // Parse the loop body.
+                        parseBlock(0, 0, numLoops + 1);
+                        expect("NEXT");
+                        append(OPS.NEXT);
+                        var elsePC = instructions.length;
+                        // Parse the "ELSE" block.
+                        parseBlock(0, 0, numLoops);
+                        expect("ELSE");
+                        var breakPC = instructions.length;
+                        slot(LOOP(loopPC, elsePC, breakPC));
                     } else if (typeof wordMatch[2] !== "undefined") {
                         // String literal.
                         if (wordMatch[3] === "") {
@@ -240,7 +265,7 @@ var assemble = function() {
                     "Used != Filled");
             }
             var startPC = instructions.length;
-            parseBlock(0);
+            parseBlock(funcEntrySP, funcExitSP, 0);
             if (instructionsFilled !== instructions.length) {
                 throw syntaxException(
                     "Used != Filled");
