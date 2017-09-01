@@ -1,4 +1,5 @@
 var OPS;
+var BREAK;
 var CONSTANT;
 var IF;
 var LLOAD;
@@ -173,6 +174,22 @@ var STORE;
             0,
             1
         )
+    };
+
+    BREAK = function BREAK(numLoops) {
+        return makeOp(
+            function BREAK(state) {
+                var i = 1;
+                while (i < numLoops) {
+                    state.frame.loop = state.frame.loop.enclosing;
+                    i++;
+                }
+                state.frame.pc = state.frame.loop.breakPC;
+                state.frame.loop = state.frame.loop.enclosing;
+            },
+            0,
+            0
+        );
     };
 
     /**

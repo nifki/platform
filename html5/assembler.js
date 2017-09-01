@@ -149,7 +149,7 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    // TODO: "FOR", "BREAK", "RETURN", "ERROR".
+                    // TODO: "FOR", "RETURN", "ERROR".
                     if (word === "IF") {
                         if (sp != 1) {
                             throw syntaxException(
@@ -243,6 +243,25 @@ var assemble = function() {
                             throw syntaxException(
                                 "Stack should be empty before executing ;");
                         }
+                    } else if (word === "BREAK") {
+                        if (sp != 0) {
+                            throw syntaxException(
+                                "Stack should be empty before executing BREAK"
+                            );
+                        }
+                        // Glob up as many "BREAK"s as possible.
+                        var numBreaks = 0;
+                        while (word === "BREAK") {
+                            numBreaks++;
+                            next();
+                        }
+                        if (numBreaks > numLoops) {
+                            throw syntaxException(
+                                numBreaks + " BREAK instructions, " +
+                                "but only " + numLoops + " enclosing loops");
+                        }
+                        append(BREAK(numBreaks));
+                        return;
                     } else {
                         if (!(word in OPS)) {
                             throw syntaxException(
