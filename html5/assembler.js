@@ -72,6 +72,16 @@ var assemble = function() {
 
         next(); // Initialise `word` and `wordMatch()`.
 
+        /** Checks that the next word matches 'expected' and calls 'next()'.
+         * @throws SyntaxException if the word does not match.
+         */
+        function expect(expected) {
+            if (word !== expected) {
+                throw syntaxException("Expected "+expected);
+            }
+            next();
+        }
+
         var globalMappings = {};
         var globalValues = [];
 
@@ -139,8 +149,29 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    // TODO: "IF", "LOOP", "FOR", "BREAK", "RETURN", "ERROR".
-                    if (typeof wordMatch[2] !== "undefined") {
+                    // TODO: "LOOP", "FOR", "BREAK", "RETURN", "ERROR".
+                    if (word === "IF") {
+                        if (sp != 1) {
+                            throw syntaxException(
+                                "Stack should contain 1 item " +
+                                "(the condition) before executing IF"
+                            );
+                        }
+                        var ifSlot = allocate();
+                        next();
+                        sp--;
+                        // Parse the "THEN" block.
+                        parseBlock(0, 0, numLoops, localMappings);
+                        expect("THEN");
+                        var thenSlot = allocate();
+                        var elsePC = instructions.length;
+                        // Parse the "ELSE" block.
+                        parseBlock(0, 0, numLoops, localMappings);
+                        expect("ELSE");
+                        var endPC = instructions.length;
+                        ifSlot(IF(elsePC));
+                        thenSlot(GOTO(endPC));
+                    } else if (typeof wordMatch[2] !== "undefined") {
                         // String literal.
                         if (wordMatch[3] === "") {
                             throw syntaxException(

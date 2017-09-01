@@ -1,10 +1,11 @@
 var OPS;
 var CONSTANT;
-var LOAD;
-var STORE;
+var IF;
 var LLOAD;
+var LOAD;
 var LSTORE;
 var SET;
+var STORE;
 
 (function() {
     function makeOp(func, pops, pushes) {
@@ -49,6 +50,13 @@ var SET;
             },
             0,
             0
+        ),
+        "FALSE": makeOp(
+            function FALSE(state) {
+                state.frame.stack.push(VALUE_FALSE);
+            },
+            0,
+            1
         ),
         "GET": makeOp(
             function GET(state) {
@@ -103,6 +111,13 @@ var SET;
             1,
             1
         ),
+        "TRUE": makeOp(
+            function TRUE(state) {
+                state.frame.stack.push(VALUE_TRUE);
+            },
+            0,
+            1
+        ),
         "WAIT": makeOp(
             function WAIT(state) {
                 throw "WAIT";
@@ -131,27 +146,33 @@ var SET;
             0,
             1
         );
-    }
+    };
 
-    LOAD = function LOAD(index, name) {
+    GOTO = function GOTO(targetPC) {
         return makeOp(
-            function LOAD(state) {
-                state.frame.stack.push(state.globals[index]);
+            function GOTO(state) {
+                state.frame.pc = targetPC;
             },
             0,
-            1
+            0
         );
-    }
+    };
 
-    STORE = function STORE(index, name) {
+    IF = function IF(targetPC) {
         return makeOp(
-            function STORE(state) {
-                state.globals[index] = state.frame.stack.pop();
+            function IF(state) {
+                var cond = state.frame.stack.pop();
+                if (cond.type !== "boolean") {
+                    throw "IF requires a boolean, not '" + cond.type + "'";
+                }
+                if (cond.v === false) {
+                    state.frame.pc = targetPC;
+                }
             },
             1,
             0
         );
-    }
+    };
 
     LLOAD = function LLOAD(index, name) {
         return makeOp(
@@ -162,7 +183,17 @@ var SET;
             0,
             1
         );
-    }
+    };
+
+    LOAD = function LOAD(index, name) {
+        return makeOp(
+            function LOAD(state) {
+                state.frame.stack.push(state.globals[index]);
+            },
+            0,
+            1
+        );
+    };
 
     LSTORE = function LSTORE(index, name) {
         return makeOp(
@@ -172,7 +203,7 @@ var SET;
             1,
             0
         );
-    }
+    };
 
     SET = function SET(name) {
         return makeOp(
@@ -197,5 +228,15 @@ var SET;
             2,
             0
         );
-    }
+    };
+
+    STORE = function STORE(index, name) {
+        return makeOp(
+            function STORE(state) {
+                state.globals[index] = state.frame.stack.pop();
+            },
+            1,
+            0
+        );
+    };
 })();

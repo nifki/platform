@@ -6,6 +6,9 @@
  * version, e.g. "number", "string".
  */
 
+var VALUE_TRUE = {"type": "boolean", "v": true};
+var VALUE_FALSE = {"type": "boolean", "v": false};
+
 function newNumber(v) {
     if (typeof v !== "number" || !isFinite(v)) {
         throw "IllegalArgumentException: " + v;

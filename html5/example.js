@@ -1,4 +1,6 @@
 var TEST_CODE = (
+    'TRUE IF ; "YES" DUMP THEN ; "NO" DUMP ; ELSE ;'
+/*
     'WINDOW WINDOW "R" GET 0.01 + SET(R) ; WAIT ; ' +
     'WINDOW WINDOW "R" GET 0.01 + SET(R) ; WAIT ; ' +
     'WINDOW WINDOW "R" GET 0.01 + SET(R) ; WAIT ; ' +
@@ -88,4 +90,5 @@ var TEST_CODE = (
     'WINDOW WINDOW "R" GET 0.01 + SET(R) ; WAIT ; ' +
     'WINDOW WINDOW "R" GET 0.01 + SET(R) ; WAIT ; ' +
     ''
+*/
 );
