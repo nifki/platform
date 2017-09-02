@@ -168,6 +168,29 @@ var STORE;
             2,
             1
         ),
+        "CALL": makeOp(
+            function CALL(state) {
+                var args = state.frame.stack.pop();
+                var f = state.frame.stack.pop();
+                if (args.type !== "table" || f.type !== "function") {
+                    throw (
+                        "Can't call " + valueToString(f) +
+                        " as a function (passing " + valueToString(args) + ")"
+                    );
+                }
+                state.frame = newStackFrame(f, state.frame);
+                state.frame.stack.push(args);
+            },
+            2,
+            1
+        ),
+        "DROP": makeOp(
+            function DROP(state) {
+                state.frame.stack.pop();
+            },
+            1,
+            0
+        ),
         "DUMP": makeOp(
             function DUMP(state) {
                 var value = state.frame.stack.pop();
@@ -267,6 +290,22 @@ var STORE;
                 }
             },
             1,
+            1
+        ),
+        "RETURN": makeOp(
+            function RETURN(state) {
+                var result = state.frame.stack.pop();
+                state.frame = state.frame.caller;
+                state.frame.stack.push(result);
+            },
+            1,
+            0
+        ),
+        "TABLE": makeOp(
+            function TABLE(state) {
+                state.frame.stack.push(newTable());
+            },
+            0,
             1
         ),
         "TRUE": makeOp(

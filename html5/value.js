@@ -60,6 +60,10 @@ var newObject = (function() {
     return newObject;
 })();
 
+function newTable() {
+    return {"type": "table", "v": ({})};
+}
+
 function valueToString(value) {
     var v = value.v;
     if (value.type === "boolean") {

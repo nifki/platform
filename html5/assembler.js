@@ -149,7 +149,7 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    // TODO: "FOR", "RETURN", "ERROR".
+                    // TODO: "FOR", "ERROR".
                     if (word === "IF") {
                         if (sp != 1) {
                             throw syntaxException(
@@ -262,6 +262,15 @@ var assemble = function() {
                         }
                         append(BREAK(numBreaks));
                         return;
+                    } else if (word === "RETURN") {
+                        if (sp != 1) {
+                            throw syntaxException(
+                                "Stack should contain 1 item (the result) " +
+                                "before executing RETURN");
+                        }
+                        append(OPS.RETURN);
+                        next();
+                        return;
                     } else {
                         if (!(word in OPS)) {
                             throw syntaxException(
@@ -290,8 +299,15 @@ var assemble = function() {
                     "Used != Filled");
             }
             var endPC = instructions.length;
-            // TODO: Do we need `numLocals`?
-            return newFunction(startPC, numLocals, originalName);
+            // Work out the stack requirements (`stackLen`).
+            var stackLen = 0, sp = funcEntrySP;
+            for (var i=startPC; i < endPC; i++) {
+                sp -= instructions[i].pops;
+                sp += instructions[i].pushes;
+                if (sp > stackLen) stackLen = sp;
+            }
+            // TODO: Do we need `numLocals`/`stackLen`?
+            return newFunction(startPC, stackLen, originalName);
         }
 
         // Parse the main program.
