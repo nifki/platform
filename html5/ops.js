@@ -46,6 +46,8 @@ var STORE;
         }
         var xKeys = Object.getOwnPropertyNames(x.v);
         var yKeys = Object.getOwnPropertyNames(y.v);
+        xKeys.sort();
+        yKeys.sort();
         var it1 = 0;
         var it2 = 0;
         while (true) {
