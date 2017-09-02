@@ -6,6 +6,16 @@
  * version, e.g. "number", "string".
  */
 
+var TYPE_INDEX = {
+    "boolean": 1,
+    "number": 2,
+    "string": 3,
+    "table": 4,
+    "picture": 5,
+    "function": 6,
+    "object": 7
+};
+
 var VALUE_TRUE = {"type": "boolean", "v": true};
 var VALUE_FALSE = {"type": "boolean", "v": false};
 
@@ -52,12 +62,14 @@ var newObject = (function() {
 
 function valueToString(value) {
     var v = value.v;
-    if (value.type === "number") {
+    if (value.type === "boolean") {
+        return v ? "TRUE" : "FALSE";
+    } else if (value.type === "number") {
         return "" + v;
     } else if (value.type === "string") {
         // TODO: SSString.encode equivalent.
         return v;
-    } else if (value.type === "func") {
+    } else if (value.type === "function") {
         return value.originalName;
     } else if (value.type === "object") {
         return value.objType + ":" + value.objNum;

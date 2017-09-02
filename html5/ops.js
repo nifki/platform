@@ -10,6 +10,58 @@ var SET;
 var STORE;
 
 (function() {
+    /** Returns negative, zero or positive indicating x < y, x == y, x > y
+     * respectively, or throws if x and y are not comparable.
+     *
+     * If x or y is a function or object, throws an exception. Otherwise,
+     * compares their types by their order in TYPE_INDEX. If equal,
+     * distinguishes cases according to type:
+     * <ul>
+     * <li> FALSE is less than TRUE.
+     * <li> numbers have the obvious ordering.
+     * <li> strings are ordered ASCII-betically.
+     * <li> tables are ordered pointwise, considering undefined values to be
+     * smaller than defined values. Keys are considered in sorted order. If
+     * any of the values is not comparable, then the tables are not
+     * comparable.
+     * <li> pictures are ordered ASCII-betically on their original variable
+     * names (including the page name and underscore).
+     * </ul>
+     */
+    // TODO: Test this thoroughly.
+    function compareValues(x, y) {
+        var xTypeIndex = TYPE_INDEX[x.type];
+        var yTypeIndex = TYPE_INDEX[y.type];
+        if (xTypeIndex > 5) throw x.type + " is not a comparable type";
+        if (yTypeIndex > 5) throw y.type + " is not a comparable type";
+        if (xTypeIndex !== yTypeIndex) return xTypeIndex - yTypeIndex;
+        if (xTypeIndex < 4) {
+            // JavaScript's semantics for boolean/number/string match ours.
+            if (x.v < y.v) return -1;
+            if (y.v < x.v) return 1;
+            return 0;
+        }
+        if (xTypeIndex === 5) {
+            return compareValues(x.v.originalName, y.v.originalName);
+        }
+        var xKeys = Object.getOwnPropertyNames(x.v);
+        var yKeys = Object.getOwnPropertyNames(y.v);
+        var it1 = 0;
+        var it2 = 0;
+        while (true) {
+            if (it1 >= xKeys.length) return it2 >= yKeys.length ? 0 : -1;
+            if (it2 >= yKeys.length) return 1;
+            var xKey = xKeys[it1];
+            var yKey = yKeys[it2];
+            var ans = -compareTo(xKey, yKey);
+            if (ans !== 0) return ans;
+            ans = compareTo(x.v[xKey], y.v[yKey]);
+            if (ans !== 0) return ans;
+            it1++;
+            it2++;
+        };
+    }
+
     function makeOp(func, pops, pushes) {
         func.pops = pops;
         func.pushes = pushes;
@@ -34,18 +86,82 @@ var STORE;
             2,
             1
         ),
-        // TODO: Other comparators.
+        "==": makeOp(
+            function EQ(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                try {
+                    var cmp = compareValues(x, y);
+                    state.frame.stack.push(
+                        cmp === 0 ? VALUE_TRUE : VALUE_FALSE);
+                } catch(err) {
+                    state.frame.stack.push(VALUE_FALSE);
+                }
+            },
+            2,
+            1
+        ),
+        "!=": makeOp(
+            function NE(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                try {
+                    var cmp = compareValues(x, y);
+                    state.frame.stack.push(
+                        cmp !== 0 ? VALUE_TRUE : VALUE_FALSE);
+                } catch(err) {
+                    state.frame.stack.push(VALUE_TRUE);
+                }
+            },
+            2,
+            1
+        ),
+        "<>": makeOp(
+            function LG(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp !== 0 ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
+        ),
         "<": makeOp(
             function LT(state) {
                 var y = state.frame.stack.pop();
                 var x = state.frame.stack.pop();
-                // TODO: full compareTo implementation
-                if (x.type === "number" && y.type === "number") {
-                    state.frame.stack.push(
-                        x.v < y.v ? VALUE_TRUE : VALUE_FALSE);
-                } else {
-                    throw "Cannot compare " + x.type + " and " + y.type;
-                }
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp < 0 ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
+        ),
+        "<=": makeOp(
+            function LTE(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp <= 0 ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
+        ),
+        ">": makeOp(
+            function GT(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp > 0 ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
+        ),
+        ">=": makeOp(
+            function GTE(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp >= 0 ? VALUE_TRUE : VALUE_FALSE);
             },
             2,
             1
@@ -135,6 +251,21 @@ var STORE;
             },
             0,
             0
+        ),
+        "NOT": makeOp(
+            function NOT(state) {
+                var x = state.frame.stack.pop();
+                if (x.type === "boolean") {
+                    state.frame.stack.push(x.v ? VALUE_FALSE : VALUE_TRUE);
+                } else {
+                    throw (
+                        "Cannot apply NOT to " + x.type +
+                        "; a boolean is required"
+                    );
+                }
+            },
+            1,
+            1
         ),
         "TRUE": makeOp(
             function TRUE(state) {
