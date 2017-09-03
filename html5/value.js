@@ -69,27 +69,72 @@ function isEmptyTable(value) {
     return value === VALUE_EMPTY_TABLE;
 }
 
-function arrayFind(array, element) {
-    if (array == null) {
-        throw '"this" is null or not defined';
+/** Returns negative, zero or positive indicating x < y, x == y, x > y
+ * respectively, or throws if x and y are not comparable.
+ *
+ * If x or y is a function or object, throws an exception. Otherwise,
+ * compares their types by their order in TYPE_INDEX. If equal,
+ * distinguishes cases according to type:
+ * <ul>
+ * <li> FALSE is less than TRUE.
+ * <li> numbers have the obvious ordering.
+ * <li> strings are ordered ASCII-betically.
+ * <li> tables are ordered pointwise, considering undefined values to be
+ * smaller than defined values. Keys are considered in sorted order. If
+ * any of the values is not comparable, then the tables are not
+ * comparable.
+ * <li> pictures are ordered ASCII-betically on their original variable
+ * names (including the page name and underscore).
+ * </ul>
+ */
+// TODO: Test this thoroughly.
+function compareValues(x, y) {
+    var xTypeIndex = TYPE_INDEX[x.type];
+    var yTypeIndex = TYPE_INDEX[y.type];
+    if (xTypeIndex > 5) throw x.type + " is not a comparable type";
+    if (yTypeIndex > 5) throw y.type + " is not a comparable type";
+    if (xTypeIndex !== yTypeIndex) return xTypeIndex - yTypeIndex;
+    if (xTypeIndex < 4) {
+        // JavaScript's semantics for boolean/number/string match ours.
+        if (x.v < y.v) return -1;
+        if (y.v < x.v) return 1;
+        return 0;
     }
-
-    var obj = Object(array);
-    var len = obj.length >>> 0;
-    if (len === 0) {
-        return -1;
+    if (xTypeIndex === 5) {
+        return compareValues(x.v.originalName, y.v.originalName);
     }
-
-    for (var k=0; k < len; k++) {
-        if (obj[k] === element) {  // We don't need to support NaN or {}.
-            return k;
-        }
+    var xKeys = Object.getOwnPropertyNames(x.v);
+    var yKeys = Object.getOwnPropertyNames(y.v);
+    xKeys.sort();
+    yKeys.sort();
+    var it1 = 0;
+    var it2 = 0;
+    while (true) {
+        if (it1 >= xKeys.length) return it2 >= yKeys.length ? 0 : -1;
+        if (it2 >= yKeys.length) return 1;
+        var xKey = xKeys[it1];
+        var yKey = yKeys[it2];
+        var ans = -compareTo(xKey, yKey);
+        if (ans !== 0) return ans;
+        ans = compareTo(x.v[xKey], y.v[yKey]);
+        if (ans !== 0) return ans;
+        it1++;
+        it2++;
     }
-
-    return -1;
 }
 
 function tablePut(table, key, value) {
+    // Helper: Returns the point at which to insert/overwrite the element.
+    function arrayFind(array, element) {
+        var len = array.length;
+        for (var i=0; i < len; i++) {
+            if (compareValues(element, array[i]) <= 0) {
+                return i;
+            }
+        }
+        return len;
+    }
+
     if (TYPE_INDEX[key.type] > 5) {
         throw "'" + valueToString(key) + "' cannot be used as key in a table";
     }
@@ -98,13 +143,15 @@ function tablePut(table, key, value) {
     }
     var newKeys = table.v.keys.slice();
     var newValues = table.v.values.slice();
-    // TODO: Insertion sort here?
+    // Insert/overwrite preserving sorted order.
     var i = arrayFind(table.v.keys, key);
-    if (i === -1) {
-        newKeys.push(key);
-        newValues.push(value);
-    } else {
+    if (i < table.v.keys.length && compareValues(table.v.keys, key) === 0) {
+        newKeys[i] = key;
         newValues[i] = value;
+    } else {
+        // Insert key and value at position `i`.
+        newKeys.splice(i, 0, key);
+        newValues.splice(i, 0, value);
     }
     return {"type": "table", "v": {"keys": newKeys, "values": newValues}};
 }
