@@ -113,7 +113,7 @@ function valueToLongString(value) {
         keys = Object.getOwnPropertyNames(v);
         keys.sort();  // TODO: Is this right?
         for (key in keys) {
-            ans += sep + valueToString(key) + "=" + valueToString(v[key]);
+            result += sep + valueToString(key) + "=" + valueToString(v[key]);
             sep = ", ";
         }
         return result + "]";
