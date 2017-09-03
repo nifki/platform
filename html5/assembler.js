@@ -149,7 +149,7 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    // TODO: "FOR", "ERROR".
+                    // TODO: "FOR".
                     if (word === "IF") {
                         if (sp != 1) {
                             throw syntaxException(
@@ -271,6 +271,18 @@ var assemble = function() {
                         append(OPS.RETURN);
                         next();
                         return;
+                    } else if (word === "ERROR") {
+                        if (sp != 1) {
+                            throw syntaxException(
+                                "Stack should contain 1 item (the result) " +
+                                "before executing ERROR");
+                        }
+                        // FIXME:
+                        // this.append(ERROR);
+                        // this.next();
+                        // return;
+                        throw "ERROR instruction not yet implemented";
+                        // It wasn't implemented in the Java either.
                     } else {
                         if (!(word in OPS)) {
                             throw syntaxException(
