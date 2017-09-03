@@ -315,7 +315,6 @@ var assemble = function() {
         append(OPS.END);
         // Parse the function definitions.
         while (word !== null) {
-            console.log(word);
             if (wordMatch[5] !== "DEF") {
                 throw syntaxException(
                     "Expected DEF(name)");

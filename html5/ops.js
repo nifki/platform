@@ -61,7 +61,7 @@ var STORE;
             if (ans !== 0) return ans;
             it1++;
             it2++;
-        };
+        }
     }
 
     function makeOp(func, pops, pushes) {
@@ -187,6 +187,19 @@ var STORE;
         "DROP": makeOp(
             function DROP(state) {
                 state.frame.stack.pop();
+            },
+            1,
+            0
+        ),
+        "DROPTABLE": makeOp(
+            function DROPTABLE(state) {
+                var value = state.frame.stack.pop();
+                if (!isEmptyTable(value)) {
+                    throw (
+                        "A function can be called as a subroutine only if " +
+                        "it returns [] (the empty table)"
+                    );
+                }
             },
             1,
             0

@@ -61,7 +61,25 @@ var newObject = (function() {
 })();
 
 function newTable() {
+    // TODO: A proper implementation. Constraints include fast key count,
+    // possibly key type and sort order. Maybe {keys: [...], values: [...]}?
+    // TODO: What are the constraints on Nifki table keys?
     return {"type": "table", "v": ({})};
+}
+
+// TODO: Inline this once tables are fully implemented?
+function isEmptyTable(value) {
+    // Oh JavaScript. ({}) !== ({}) && ({}) != ({}).
+    if (value.type !== "table") {
+        return false;
+    }
+    var v = value.v;
+    for (var key in v) {
+        if (v.hasOwnProperty(key)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function valueToString(value) {
@@ -73,6 +91,9 @@ function valueToString(value) {
     } else if (value.type === "string") {
         // TODO: SSString.encode equivalent.
         return v;
+    } else if (value.type === "table") {
+        var keys = Object.getOwnPropertyNames(v);
+        return "TABLE(" + keys.length + " keys)";
     } else if (value.type === "function") {
         return value.originalName;
     } else if (value.type === "object") {
@@ -84,19 +105,28 @@ function valueToString(value) {
 
 function valueToLongString(value) {
     var v = value.v;
-    var ans, sep;
+    var result, sep, keys, key;
     if (value.type === "table") {
-        return "<TODO: valueToLongString " + value.type + ">";
-    } else if (value.type === "object") {
-        ans = valueToString(value) + "(";
+        // TODO: A full implementation.
+        result = "[";
         sep = "";
-        for (var key in v) {
-            if (v.hasOwnProperty(key)) {
-                ans += sep + key + "=" + valueToString(v[key]);
-                sep = ", ";
-            }
+        keys = Object.getOwnPropertyNames(v);
+        keys.sort();  // TODO: Is this right?
+        for (key in keys) {
+            ans += sep + valueToString(key) + "=" + valueToString(v[key]);
+            sep = ", ";
         }
-        return ans + ")";
+        return result + "]";
+    } else if (value.type === "object") {
+        result = valueToString(value) + "(";
+        sep = "";
+        keys = Object.getOwnPropertyNames(v);
+        keys.sort();  // TODO: Is this right?
+        for (key in keys) {
+            result += sep + key + "=" + valueToString(v[key]);
+            sep = ", ";
+        }
+        return result + ")";
     } else {
         return valueToString(value);
     }
