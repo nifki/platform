@@ -99,7 +99,7 @@ function tablePut(table, key, value) {
     var newKeys = table.v.keys.slice();
     var newValues = table.v.values.slice();
     // TODO: Insertion sort here?
-    var i = arrayFind(table.v, key);
+    var i = arrayFind(table.v.keys, key);
     if (i === -1) {
         newKeys.push(key);
         newValues.push(value);
