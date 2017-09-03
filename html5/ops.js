@@ -305,6 +305,17 @@ var STORE;
             1,
             1
         ),
+        "PUT": makeOp(
+            function PUT(state) {
+                var stack = state.frame.stack;
+                var v = stack.pop();
+                var k = stack.pop();
+                var t = stack.pop();
+                stack.push(tablePut(t, k, v));
+            },
+            3,
+            1
+        ),
         "RETURN": makeOp(
             function RETURN(state) {
                 var result = state.frame.stack.pop();

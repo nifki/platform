@@ -18,6 +18,7 @@ var TYPE_INDEX = {
 
 var VALUE_TRUE = {"type": "boolean", "v": true};
 var VALUE_FALSE = {"type": "boolean", "v": false};
+var VALUE_EMPTY_TABLE = {"type": "table", "v": {"keys": [], "values": []}};
 
 function newNumber(v) {
     if (typeof v !== "number" || !isFinite(v)) {
@@ -61,25 +62,50 @@ var newObject = (function() {
 })();
 
 function newTable() {
-    // TODO: A proper implementation. Constraints include fast key count,
-    // possibly key type and sort order. Maybe {keys: [...], values: [...]}?
-    // TODO: What are the constraints on Nifki table keys?
-    return {"type": "table", "v": ({})};
+    return VALUE_EMPTY_TABLE;
 }
 
-// TODO: Inline this once tables are fully implemented?
 function isEmptyTable(value) {
-    // Oh JavaScript. ({}) !== ({}) && ({}) != ({}).
-    if (value.type !== "table") {
-        return false;
+    return value === VALUE_EMPTY_TABLE;
+}
+
+function arrayFind(array, element) {
+    if (array == null) {
+        throw '"this" is null or not defined';
     }
-    var v = value.v;
-    for (var key in v) {
-        if (v.hasOwnProperty(key)) {
-            return false;
+
+    var obj = Object(array);
+    if ((obj.length >>> 0) === 0) {
+        return -1;
+    }
+
+    for (var k=0; k < len; k++) {
+        if (obj[k] === element) {  // We don't need to support NaN or {}.
+            return k;
         }
     }
-    return true;
+
+    return -1;
+}
+
+function tablePut(table, key, value) {
+    if (TYPE_INDEX[key.type] > 5) {
+        throw "'" + valueToString(key) + "' cannot be used as key in a table";
+    }
+    if (table.type !== "table") {
+        throw "'" + valueToString(table) + "' is not a table";
+    }
+    var newKeys = table.v.keys.slice();
+    var newValues = table.v.values.slice();
+    // TODO: Insertion sort here?
+    var i = arrayFind(table.v, key);
+    if (i === -1) {
+        newKeys.push(key);
+        newValues.push(value);
+    } else {
+        newValues[i] = value;
+    }
+    return {"type": "table", "v": {"keys": newKeys, "values": newValues}};
 }
 
 function valueToString(value) {
@@ -92,8 +118,7 @@ function valueToString(value) {
         // TODO: SSString.encode equivalent.
         return v;
     } else if (value.type === "table") {
-        var keys = Object.getOwnPropertyNames(v);
-        return "TABLE(" + keys.length + " keys)";
+        return "TABLE(" + v.keys.length + " keys)";
     } else if (value.type === "function") {
         return value.originalName;
     } else if (value.type === "object") {
@@ -105,24 +130,28 @@ function valueToString(value) {
 
 function valueToLongString(value) {
     var v = value.v;
-    var result, sep, keys, key;
+    var i, result, sep, keys, key;
     if (value.type === "table") {
-        // TODO: A full implementation.
+        // TODO: Sort order?
         result = "[";
         sep = "";
-        keys = Object.getOwnPropertyNames(v);
-        keys.sort();  // TODO: Is this right?
-        for (key in keys) {
-            result += sep + valueToString(key) + "=" + valueToString(v[key]);
+        keys = v.keys;
+        var values = v.values;
+        for (i=0; i < keys.length; i++) {
+            key = keys[i];
+            var value = values[i];
+            result += sep + valueToString(key) + "=" + valueToString(value);
             sep = ", ";
         }
         return result + "]";
     } else if (value.type === "object") {
+        // TODO: Sort order?
         result = valueToString(value) + "(";
         sep = "";
         keys = Object.getOwnPropertyNames(v);
-        keys.sort();  // TODO: Is this right?
-        for (key in keys) {
+        keys.sort();
+        for (i=0; i < keys.length; i++) {
+            key = keys[i];
             result += sep + key + "=" + valueToString(v[key]);
             sep = ", ";
         }
