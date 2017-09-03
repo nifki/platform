@@ -75,7 +75,8 @@ function arrayFind(array, element) {
     }
 
     var obj = Object(array);
-    if ((obj.length >>> 0) === 0) {
+    var len = obj.length >>> 0;
+    if (len === 0) {
         return -1;
     }
 
