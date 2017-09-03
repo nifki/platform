@@ -187,8 +187,8 @@ function valueToLongString(value) {
         var values = v.values;
         for (i=0; i < keys.length; i++) {
             key = keys[i];
-            var value = values[i];
-            result += sep + valueToString(key) + "=" + valueToString(value);
+            result += (
+                sep + valueToString(key) + "=" + valueToString(values[i]));
             sep = ", ";
         }
         return result + "]";
