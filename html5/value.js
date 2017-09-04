@@ -193,6 +193,10 @@ function tableIterator(table) {
     return iterItem;
 }
 
+function tableSize(table) {
+    return table.v.keys.length;
+}
+
 function valueToString(value) {
     var v = value.v;
     if (value.type === "boolean") {

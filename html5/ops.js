@@ -339,6 +339,20 @@ var STORE;
             2,
             1
         ),
+        "LEN": makeOp(
+            function LEN(state) {
+                var x = state.frame.stack.pop();
+                if (x.type === "string") {
+                    state.frame.stack.push(newNumber(x.v.length));
+                } else if (x.type === "table") {
+                    state.frame.stack.push(newNumber(tableSize(x)));
+                } else {
+                    throw "Cannot apply LEN to " + valueToString(x);
+                }
+            },
+            1,
+            1
+        ),
         "NEG": makeOp(
             function NEG(state) {
                 var x = state.frame.stack.pop();
