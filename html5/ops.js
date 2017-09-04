@@ -447,6 +447,20 @@ var STORE;
             1,
             0
         ),
+        "ROUND": makeOp(
+            function ROUND(state) {
+                var x = state.frame.stack.pop();
+                if (x.type !== "number") {
+                    throw (
+                        "Cannot apply ROUND to " + valueToString(x) +
+                        "; a number is required"
+                    );
+                }
+                state.frame.stack.push(newNumber(Math.round(x.v)));
+            },
+            1,
+            1
+        ),
         "TABLE": makeOp(
             function TABLE(state) {
                 state.frame.stack.push(newTable());
