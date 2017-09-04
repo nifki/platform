@@ -353,6 +353,26 @@ var STORE;
             1,
             1
         ),
+        "MAX": makeOp(
+            function MAX(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp > 0 ? x : y);
+            },
+            2,
+            1
+        ),
+        "MIN": makeOp(
+            function MIN(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                var cmp = compareValues(x, y);
+                state.frame.stack.push(cmp < 0 ? x : y);
+            },
+            2,
+            1
+        ),
         "NEG": makeOp(
             function NEG(state) {
                 var x = state.frame.stack.pop();
