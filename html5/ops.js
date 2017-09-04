@@ -115,6 +115,20 @@ var STORE;
             2,
             1
         ),
+        "ABS": makeOp(
+            function ABS(state) {
+                var x = state.frame.stack.pop();
+                if (x.type !== "number") {
+                    throw (
+                        "Cannot apply ABS to " + valueToString(x) +
+                        "; a number is required"
+                    );
+                }
+                state.frame.stack.push(newNumber(Math.abs(x.v)));
+            },
+            1,
+            1
+        ),
         "CALL": makeOp(
             function CALL(state) {
                 var args = state.frame.stack.pop();
