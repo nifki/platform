@@ -569,6 +569,22 @@ var STORE;
             },
             0,
             1
+        ),
+        "XOR": makeOp(
+            function XOR(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type !== "boolean" || y.type !== "boolean") {
+                    throw (
+                        "Cannot apply XOR to " + valueToString(x) + " and " +
+                        valueToString(y) + "; two booleans are required"
+                    );
+                }
+                var result = x.v ^ y.v;
+                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
         )
     };
 
