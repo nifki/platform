@@ -161,6 +161,20 @@ var STORE;
             2,
             1
         ),
+        "CEIL": makeOp(
+            function CEIL(state) {
+                var x = state.frame.stack.pop();
+                if (x.type !== "number") {
+                    throw (
+                        "Cannot apply CEIL to " + valueToString(x) +
+                        "; a number is required"
+                    );
+                }
+                state.frame.stack.push(newNumber(-Math.floor(-x.v)));
+            },
+            1,
+            1
+        ),
         "DROP": makeOp(
             function DROP(state) {
                 state.frame.stack.pop();
@@ -205,6 +219,20 @@ var STORE;
                 state.frame.stack.push(VALUE_FALSE);
             },
             0,
+            1
+        ),
+        "FLOOR": makeOp(
+            function FLOOR(state) {
+                var x = state.frame.stack.pop();
+                if (x.type !== "number") {
+                    throw (
+                        "Cannot apply FLOOR to " + valueToString(x) +
+                        "; a number is required"
+                    );
+                }
+                state.frame.stack.push(newNumber(Math.floor(x.v)));
+            },
+            1,
             1
         ),
         "GET": makeOp(
