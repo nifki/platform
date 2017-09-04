@@ -156,6 +156,31 @@ function tablePut(table, key, value) {
     return {"type": "table", "v": {"keys": newKeys, "values": newValues}};
 }
 
+function tableIterator(table) {
+    var keys = table.v.keys;
+    if (keys.length === 0) {
+        return null;
+    }
+    var values = table.v.values;
+    var iterItem = {
+        "key": keys[0],
+        "value": values[0],
+        "next": null  // Set below.
+    };
+    var i = 0;
+    function tableIteratorNext() {
+        i++;
+        if (i >= keys.length) {
+            return null;
+        }
+        iterItem.key = keys[i];
+        iterItem.value = values[i];
+        return iterItem;
+    }
+    iterItem.next = tableIteratorNext;
+    return iterItem;
+}
+
 function valueToString(value) {
     var v = value.v;
     if (value.type === "boolean") {

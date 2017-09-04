@@ -149,7 +149,6 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    // TODO: "FOR".
                     if (word === "IF") {
                         if (sp != 1) {
                             throw syntaxException(
@@ -196,6 +195,26 @@ var assemble = function() {
                         expect("ELSE");
                         var breakPC = instructions.length;
                         slot(LOOP(loopPC, elsePC, breakPC));
+                    } else if (word === "FOR") {
+                        if (sp != 1) {
+                            throw syntaxException(
+                                "Stack should contain 1 item " +
+                                "(the table or string) before executing FOR");
+                        }
+                        next();
+                        var slot = allocate();
+                        var loopPC = instructions.length;
+                        // Parse the loop body.
+                        parseBlock(2, 0, numLoops + 1);
+                        sp--;
+                        expect("NEXT");
+                        append(OPS.NEXT);
+                        var elsePC = instructions.length;
+                        // Parse the "ELSE" block.
+                        parseBlock(0, 0, numLoops);
+                        expect("ELSE");
+                        var breakPC = instructions.length;
+                        slot(FOR(loopPC, elsePC, breakPC));
                     } else if (typeof wordMatch[2] !== "undefined") {
                         // String literal.
                         if (wordMatch[3] === "") {
