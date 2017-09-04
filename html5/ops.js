@@ -30,9 +30,73 @@ var STORE;
                 } else if (x.type === "string" && y.type === "string") {
                     state.frame.stack.push(newString(x.v + y.v));
                 } else if (x.type === "table" && y.type === "table") {
-                    throw "NotImplemented: table addition";  // TODO
+                    var it = tableIterator(y);
+                    while (it !== null) {
+                        x = tablePut(x, it.key, it.value);
+                        it = it.next();
+                    }
+                    state.frame.stack.push(x);
                 } else {
-                    throw "Cannot add " + x.type + " to " + y.type;
+                    throw (
+                        "Cannot add " + valueToString(x) + " to " +
+                        valueToString(y)
+                    );
+                }
+            },
+            2,
+            1
+        ),
+        "-": makeOp(
+            function SUB(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type === "number" && y.type === "number") {
+                    state.frame.stack.push(newNumber(x.v - y.v));
+                } else if (x.type === "number" && y.type === "string") {
+                    var yStr = y.v;
+                    var xInt = x.v | 0;
+                    if (xInt !== x.v) {
+                        throw valueToString(x) + " is not an integer";
+                    }
+                    if (xInt < 0 || xInt > yStr.length) {
+                        throw (
+                            "Cannot remove " + valueToString(x) +
+                            " characters from " + valueToString(y) +
+                            ": index out of range"
+                        );
+                    }
+                    var result = yStr.substring(xInt);
+                    state.frame.stack.push(newString(result));
+                } else if (x.type === "string" && y.type === "number") {
+                    var xStr = x.v;
+                    var yInt = y.v | 0;
+                    if (yInt !== y.v) {
+                        throw valueToString(y) + " is not an integer";
+                    }
+                    if (yInt < 0 || yInt > xStr.length) {
+                        throw (
+                            "Cannot remove " + valueToString(y) +
+                            " characters from " + valueToString(x) +
+                            ": index out of range"
+                        );
+                    }
+                    var result = xStr.substring(0, xStr.length - yInt);
+                    state.frame.stack.push(newString(result));
+                } else if (x.type === "table" && y.type === "table") {
+                    var result = newTable();
+                    var it = tableIterator(x);
+                    while (it !== null) {
+                        if (tableGet(y, it.key) === null) {
+                            result = tablePut(result, it.key, it.value);
+                        }
+                        it = it.next();
+                    }
+                    state.frame.stack.push(result);
+                } else {
+                    throw (
+                        "Cannot subtract " + valueToString(y) + " from " +
+                        valueToString(x)
+                    );
                 }
             },
             2,

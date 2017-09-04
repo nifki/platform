@@ -1,14 +1,10 @@
 "use strict";
 
 var TEST_CODE = (
-    '0.1 ROUND DUMP ;\n' +
-    '0.5 ROUND DUMP ;\n' +
-    '0.6 ROUND DUMP ;\n' +
-    '1.1 ROUND DUMP ;\n' +
-    '"" DUMP ;\n' +
-    '0.1 NEG ROUND DUMP ;\n' +
-    '0.5 NEG ROUND DUMP ;\n' +
-    '0.6 NEG ROUND DUMP ;\n' +
-    '1.1 NEG ROUND DUMP ;\n' +
+    'TABLE 3 "?" PUT 1 "one" PUT TABLE 2 "two" PUT 3 "three" PUT + DUMP ;\n' +
+    '3 2 - DUMP ;\n' +
+    '"hello" 2 - DUMP ;\n' +
+    '2 "hello" - DUMP ;\n' +
+    'TABLE 3 "?" PUT 1 "one" PUT TABLE 2 "two" PUT 3 "three" PUT - DUMP ;\n' +
     ''
 );
