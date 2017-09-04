@@ -141,11 +141,12 @@ function tablePut(table, key, value) {
     if (table.type !== "table") {
         throw "'" + valueToString(table) + "' is not a table";
     }
-    var newKeys = table.v.keys.slice();
+    var keys = table.v.keys;
+    var newKeys = keys.slice();
     var newValues = table.v.values.slice();
     // Insert/overwrite preserving sorted order.
-    var i = arrayFind(table.v.keys, key);
-    if (i < table.v.keys.length && compareValues(table.v.keys, key) === 0) {
+    var i = arrayFind(keys, key);
+    if (i < keys.length && compareValues(keys[i], key) === 0) {
         newKeys[i] = key;
         newValues[i] = value;
     } else {
