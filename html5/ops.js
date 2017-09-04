@@ -129,6 +129,22 @@ var STORE;
             1,
             1
         ),
+        "AND": makeOp(
+            function AND(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type !== "boolean" || y.type !== "boolean") {
+                    throw (
+                        "Cannot apply AND to " + valueToString(x) + " and " +
+                        valueToString(y) + "; two booleans are required"
+                    );
+                }
+                var result = x.v && y.v;
+                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
+        ),
         "CALL": makeOp(
             function CALL(state) {
                 var args = state.frame.stack.pop();
@@ -264,6 +280,22 @@ var STORE;
                 }
             },
             1,
+            1
+        ),
+        "OR": makeOp(
+            function OR(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type !== "boolean" || y.type !== "boolean") {
+                    throw (
+                        "Cannot apply OR to " + valueToString(x) + " and " +
+                        valueToString(y) + "; two booleans are required"
+                    );
+                }
+                var result = x.v || y.v;
+                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
             1
         ),
         "PUT": makeOp(

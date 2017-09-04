@@ -1,4 +1,12 @@
 var TEST_CODE = (
-    '3 NEG ABS DUMP ;\n' +
-    '"3" NEG ABS DUMP ;'
+    '"FALSE AND FALSE =" DUMP ; FALSE FALSE AND DUMP ;\n' +
+    '"FALSE AND TRUE  =" DUMP ; FALSE TRUE AND DUMP ;\n' +
+    '"TRUE  AND FALSE =" DUMP ; TRUE FALSE AND DUMP ;\n' +
+    '"TRUE  AND TRUE  =" DUMP ; TRUE TRUE AND DUMP ;' +
+    '\n' +
+    '"FALSE OR FALSE =" DUMP ; FALSE FALSE OR DUMP ;\n' +
+    '"FALSE OR TRUE  =" DUMP ; FALSE TRUE OR DUMP ;\n' +
+    '"TRUE  OR FALSE =" DUMP ; TRUE FALSE OR DUMP ;\n' +
+    '"TRUE  OR TRUE  =" DUMP ; TRUE TRUE OR DUMP ;' +
+    ''
 );
