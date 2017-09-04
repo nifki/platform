@@ -1,3 +1,5 @@
+"use strict";
+
 /** Constructs a stack frame.
  *
  * @param func the Nifki function object.

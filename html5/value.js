@@ -1,3 +1,5 @@
+"use strict";
+
 /*
  * Nifki values are Javascript objects with a "type" field of type String and
  * a "v" field whose type depends on the type. It is the equivalent of the
