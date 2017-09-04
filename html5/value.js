@@ -123,18 +123,18 @@ function compareValues(x, y) {
     }
 }
 
-function tablePut(table, key, value) {
-    // Helper: Returns the point at which to insert/overwrite the element.
-    function arrayFind(array, element) {
-        var len = array.length;
-        for (var i=0; i < len; i++) {
-            if (compareValues(element, array[i]) <= 0) {
-                return i;
-            }
+// Helper: Returns the point at which to insert/overwrite the element.
+function arrayFind(array, element) {
+    var len = array.length;
+    for (var i=0; i < len; i++) {
+        if (compareValues(element, array[i]) <= 0) {
+            return i;
         }
-        return len;
     }
+    return len;
+}
 
+function tablePut(table, key, value) {
     if (TYPE_INDEX[key.type] > 5) {
         throw "'" + valueToString(key) + "' cannot be used as key in a table";
     }
@@ -155,6 +155,15 @@ function tablePut(table, key, value) {
         newValues.splice(i, 0, value);
     }
     return {"type": "table", "v": {"keys": newKeys, "values": newValues}};
+}
+
+function tableGet(table, key) {
+    var keys = table.v.keys;
+    var i = arrayFind(keys, key);
+    if (i < keys.length && compareValues(keys[i], key) === 0) {
+        return table.v.values[i];
+    }
+    return null;
 }
 
 function tableIterator(table) {

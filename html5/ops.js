@@ -239,35 +239,41 @@ var STORE;
             function GET(state) {
                 var k = state.frame.stack.pop();
                 var t = state.frame.stack.pop();
-                var ans;
+                var result;
                 if (t.type === "string") {
                     if (k.type !== "number") {
-                        throw "Cannot subscript " + t.type + " by " + k.type;
+                        throw (
+                            "Cannot subscript " + valueToString(t) +
+                            " by " + valueToString(k)
+                        );
                     }
                     if (k.v % 1 !== 0) {
                         throw (
                             "String subscript must be an integer, not " +
-                            k.v
+                            valueToString(k)
                         );
                     }
-                    ans = newString(t.v.substring(k.v, k.v + 1));
+                    result = newString(t.v.substring(k.v, k.v + 1));
                 } else if (t.type === "table") {
-                    throw "NotImplemented: table GET"; // TODO.
+                    result = tableGet(t, k);
                 } else if (t.type === "object") {
                     if (k.type !== "string") {
-                        throw "Cannot subscript " + t.type + " by " + k.type;
+                        throw (
+                            "Cannot subscript " + valueToString(t) +
+                            " by " + valueToString(k)
+                        );
                     }
-                    ans = t.v[k.v];
+                    result = t.v[k.v];
                 } else {
-                    throw "Cannot subscript " + t.type;
+                    throw "Cannot subscript " + valueToString(t);
                 }
-                if (typeof ans === "undefined") {
+                if (typeof result === "undefined" || result === null) {
                     throw (
                         valueToString(t) + "[" + valueToString(k) + "]" +
                         " is not defined"
                     );
                 }
-                state.frame.stack.push(ans);
+                state.frame.stack.push(result);
             },
             2,
             1
