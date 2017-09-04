@@ -102,6 +102,64 @@ var STORE;
             2,
             1
         ),
+        "/": makeOp(
+            function DIV(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type === "number" && y.type === "number") {
+                    state.frame.stack.push(newNumber(x.v / y.v));
+                } else if (x.type === "number" && y.type === "string") {
+                    var xInt = x.v | 0;
+                    if (xInt !== x.v) {
+                        throw valueToString(x) + " is not an integer";
+                    }
+                    var yStr = y.v;
+                    if (xInt < 0 || xInt > yStr.length) {
+                        throw (
+                            "Cannot keep " + valueToString(x) +
+                            " characters from " + valueToString(y) +
+                            ": index out of range"
+                        );
+                    }
+                    state.frame.stack.push(
+                        newString(yStr.substring(0, xInt))
+                    );
+                } else if (x.type === "string" && y.type === "number") {
+                    var xStr = x.v;
+                    var yInt = y.v | 0;
+                    if (yInt !== y.v) {
+                        throw valueToString(y) + " is not an integer";
+                    }
+                    if (yInt < 0 || yInt > xStr.length) {
+                        throw (
+                            "Cannot keep " + valueToString(y) +
+                            " characters from " + valueToString(x) +
+                            ": index out of range"
+                        );
+                    }
+                    state.frame.stack.push(
+                        newString(xStr.substring(xStr.length - yInt))
+                    );
+                } else if (x.type === "table" && y.type === "table") {
+                    var result = newTable();
+                    var it = tableIterator(x);
+                    while (it !== null) {
+                        if (tableGet(y, it.key) !== null) {
+                            result = tablePut(result, it.key, it.value);
+                        }
+                        it = it.next();
+                    }
+                    state.frame.stack.push(result);
+                } else {
+                    throw (
+                        "Cannot divide " + valueToString(x) + " by " +
+                        valueToString(y)
+                    );
+                }
+            },
+            2,
+            1
+        ),
         "==": makeOp(
             function EQ(state) {
                 var y = state.frame.stack.pop();
@@ -240,64 +298,6 @@ var STORE;
                 state.frame.stack.push(newNumber(-Math.floor(-x.v)));
             },
             1,
-            1
-        ),
-        "/": makeOp(
-            function DIV(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
-                if (x.type === "number" && y.type === "number") {
-                    state.frame.stack.push(newNumber(x.v / y.v));
-                } else if (x.type === "number" && y.type === "string") {
-                    var xInt = x.v | 0;
-                    if (xInt !== x.v) {
-                        throw valueToString(x) + " is not an integer";
-                    }
-                    var yStr = y.v;
-                    if (xInt < 0 || xInt > yStr.length) {
-                        throw (
-                            "Cannot keep " + valueToString(x) +
-                            " characters from " + valueToString(y) +
-                            ": index out of range"
-                        );
-                    }
-                    state.frame.stack.push(
-                        newString(yStr.substring(0, xInt))
-                    );
-                } else if (x.type === "string" && y.type === "number") {
-                    var xStr = x.v;
-                    var yInt = y.v | 0;
-                    if (yInt !== y.v) {
-                        throw valueToString(y) + " is not an integer";
-                    }
-                    if (yInt < 0 || yInt > xStr.length) {
-                        throw (
-                            "Cannot keep " + valueToString(y) +
-                            " characters from " + valueToString(x) +
-                            ": index out of range"
-                        );
-                    }
-                    state.frame.stack.push(
-                        newString(xStr.substring(xStr.length - yInt))
-                    );
-                } else if (x.type === "table" && y.type === "table") {
-                    var result = newTable();
-                    var it = tableIterator(x);
-                    while (it !== null) {
-                        if (tableGet(y, it.key) !== null) {
-                            result = tablePut(result, it.key, it.value);
-                        }
-                        it = it.next();
-                    }
-                    state.frame.stack.push(result);
-                } else {
-                    throw (
-                        "Cannot divide " + valueToString(x) + " by " +
-                        valueToString(y)
-                    );
-                }
-            },
-            2,
             1
         ),
         "DROP": makeOp(
