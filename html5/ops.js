@@ -102,6 +102,43 @@ var STORE;
             2,
             1
         ),
+        "*": makeOp(
+            function MUL(state) {
+                function repeatString(string, number) {
+                    var count = number.v | 0;
+                    if (number.v != count) {
+                        throw valueToString(number) + " is not an integer";
+                    }
+                    if (count < 0) {
+                        throw (
+                            "Cannot concatenate " + valueToString(number) +
+                            " copies of " + valueToString(string)
+                        );
+                    }
+                    var result = '';
+                    for (var i=0; i < count; i++) {
+                        result += string.v;
+                    }
+                    return newString(result);
+                }
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type === "number" && y.type === "number") {
+                    state.frame.stack.push(newNumber(x.v * y.v));
+                } else if (x.type === "number" && y.type === "string") {
+                    state.frame.stack.push(repeatString(y, x));
+                } else if (x.type === "string" && y.type === "number") {
+                    state.frame.stack.push(repeatString(x, y));
+                } else {
+                    throw (
+                        "Cannot multiply " + valueToString(x) + " by " +
+                        valueToString(y)
+                    );
+                }
+            },
+            2,
+            1
+        ),
         "/": makeOp(
             function DIV(state) {
                 var y = state.frame.stack.pop();
