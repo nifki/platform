@@ -443,13 +443,21 @@ var STORE;
                             " by " + valueToString(k)
                         );
                     }
-                    if (k.v % 1 !== 0) {
+                    var index = k.v | 0;
+                    if (index != k.v) {
                         throw (
                             "String subscript must be an integer, not " +
                             valueToString(k)
                         );
                     }
-                    result = newString(t.v.substring(k.v, k.v + 1));
+                    if (index >= 0 && index < t.v.length) {
+                        result = newString(t.v.substring(index, index + 1));
+                    } else {
+                        throw (
+                            "IndexOutOfBoundsException: " +
+                            "String index out of range: " + index
+                        );
+                    }
                 } else if (t.type === "table") {
                     result = tableGet(t, k);
                 } else if (t.type === "object") {
