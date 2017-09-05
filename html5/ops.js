@@ -160,6 +160,22 @@ var STORE;
             2,
             1
         ),
+        "%": makeOp(
+            function MOD(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type !== "number" || y.type !== "number") {
+                    throw (
+                        "Cannot apply % to " + valueToString(x) + " and " +
+                        valueToString(y) + "; two numbers are required"
+                    );
+                }
+                var result = x.v - y.v * Math.floor(x.v / y.v);
+                state.frame.stack.push(newNumber(result));
+            },
+            2,
+            1
+        ),
         "==": makeOp(
             function EQ(state) {
                 var y = state.frame.stack.pop();
