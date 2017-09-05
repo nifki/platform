@@ -115,9 +115,12 @@ var STORE;
                             " copies of " + valueToString(string)
                         );
                     }
-                    var result = '';
-                    for (var i=0; i < count; i++) {
-                        result += string.v;
+                    var result = "";
+                    var unit = string.v;
+                    while (count !== 0) {
+                        if (count & 1) result += unit;
+                        unit += unit;
+                        count >>= 1;
                     }
                     return newString(result);
                 }
