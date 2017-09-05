@@ -593,6 +593,24 @@ var STORE;
             1,
             1
         ),
+        "SQRT": makeOp(
+            function SQRT(state) {
+                var x = state.frame.stack.pop();
+                if (x.type === "number") {
+                    if (x.v < 0) {
+                        throw (
+                            "Cannot square root negative number " +
+                            valueToString(x)
+                        );
+                    }
+                    state.frame.stack.push(newNumber(Math.sqrt(x.v)));
+                } else {
+                    throw "Cannot square root " + valueToString(x);
+                }
+            },
+            1,
+            1
+        ),
         "TABLE": makeOp(
             function TABLE(state) {
                 state.frame.stack.push(newTable());
