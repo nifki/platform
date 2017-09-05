@@ -213,6 +213,21 @@ var STORE;
             2,
             1
         ),
+        "**": makeOp(
+            function POW(state) {
+                var y = state.frame.stack.pop();
+                var x = state.frame.stack.pop();
+                if (x.type !== "number" || y.type !== "number") {
+                    throw (
+                        "Cannot apply ** to " + valueToString(x) + " and " +
+                        valueToString(y) + "; two numbers are required"
+                    );
+                }
+                state.frame.stack.push(newNumber(Math.pow(x.v, y.v)));
+            },
+            2,
+            1
+        ),
         "==": makeOp(
             function EQ(state) {
                 var y = state.frame.stack.pop();
