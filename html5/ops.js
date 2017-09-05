@@ -518,7 +518,7 @@ var STORE;
                     state.frame.stack.push(
                         newString(x.v.split("").reverse().join("")));
                 } else {
-                    throw "Cannot negate " + x.type;
+                    throw "Cannot negate " + valueToString(x);
                 }
             },
             1,
@@ -538,7 +538,7 @@ var STORE;
                     state.frame.stack.push(x.v ? VALUE_FALSE : VALUE_TRUE);
                 } else {
                     throw (
-                        "Cannot apply NOT to " + x.type +
+                        "Cannot apply NOT to " + valueToString(x) +
                         "; a boolean is required"
                     );
                 }
@@ -640,7 +640,7 @@ var STORE;
                 var cond = state.frame.stack.pop();
                 if (cond.type !== "boolean") {
                     throw (
-                        "Cannot execute WHILE " + cond.type +
+                        "Cannot execute WHILE " + valueToString(cond) +
                         "; a boolean is required"
                     );
                 }
@@ -783,7 +783,10 @@ var STORE;
             function IF(state) {
                 var cond = state.frame.stack.pop();
                 if (cond.type !== "boolean") {
-                    throw "IF requires a boolean, not '" + cond.type + "'";
+                    throw (
+                        "IF requires a boolean, not '" + valueToString(cond) +
+                        "'"
+                    );
                 }
                 if (cond.v === false) {
                     state.frame.pc = targetPC;
@@ -849,17 +852,17 @@ var STORE;
             function SET(state) {
                 var v = state.frame.stack.pop();
                 var o = state.frame.stack.pop();
-                if (typeof o !== "object") {
+                if (o.type !== "object") {
                     throw (
-                        "Cannot apply SET to " + o.type +
+                        "Cannot apply SET to " + valueToString(o) +
                         "; an object is required"
                     );
                 }
                 var old = o.v[name];
-                if (typeof old !== typeof v) {
+                if (old.type !== v.type) {
                     throw (
-                        "SET " + o.objType + "." + name +
-                        " = " + v.type
+                        "SET " + valueToString(o) + "." + name +
+                        " = " + valueToString(v)
                     );
                 }
                 o.v[name] = v;
