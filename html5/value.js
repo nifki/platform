@@ -130,14 +130,18 @@ function compareValues(x, y) {
 }
 
 // Helper: Returns the point at which to insert/overwrite the element.
-function arrayFind(array, element) {
+function sortedArrayFind(array, element) {
     var len = array.length;
-    for (var i=0; i < len; i++) {
-        if (compareValues(element, array[i]) <= 0) {
-            return i;
+    var start = 0, end = len;
+    while (start < end) {
+        var i = (start + end) >> 1;
+        if (compareValues(array[i], element) < 0) {
+            start = i + 1;
+        } else {
+            end = i;
         }
     }
-    return len;
+    return start;
 }
 
 function tablePut(table, key, value) {
@@ -151,7 +155,7 @@ function tablePut(table, key, value) {
     var newKeys = keys.slice();
     var newValues = table.v.values.slice();
     // Insert/overwrite preserving sorted order.
-    var i = arrayFind(keys, key);
+    var i = sortedArrayFind(keys, key);
     if (i < keys.length && compareValues(keys[i], key) === 0) {
         newKeys[i] = key;
         newValues[i] = value;
@@ -165,7 +169,7 @@ function tablePut(table, key, value) {
 
 function tableGet(table, key) {
     var keys = table.v.keys;
-    var i = arrayFind(keys, key);
+    var i = sortedArrayFind(keys, key);
     if (i < keys.length && compareValues(keys[i], key) === 0) {
         return table.v.values[i];
     }
