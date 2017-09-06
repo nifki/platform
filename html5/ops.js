@@ -397,6 +397,32 @@ var STORE;
             2,
             1
         ),
+        "DGET": makeOp(
+            function DGET(state) {
+                var k = state.frame.stack.pop();
+                var t = state.frame.stack.pop();
+                if (t.type === "table") {
+                    var v = tableGet(t, k);
+                    if (v === null) {
+                        throw (
+                            valueToString(t) + "[" + valueToString(k) +
+                            "] is not defined"
+                        );
+                    }
+                    state.frame.stack.push(t);
+                    state.frame.stack.push(k);
+                    state.frame.stack.push(v);
+                } else {
+                    // The Java version said "Cannot assign to ..."
+                    throw (
+                        "Cannot access " + valueToString(t) + "[" +
+                        valueToString(k) + "]; a table is required"
+                    );
+                }
+            },
+            2,
+            3
+        ),
         "DROP": makeOp(
             function DROP(state) {
                 state.frame.stack.pop();
