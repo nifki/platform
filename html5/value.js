@@ -105,21 +105,25 @@ function compareValues(x, y) {
     if (xTypeIndex === 5) {
         return compareValues(x.v.originalName, y.v.originalName);
     }
-    var xKeys = Object.getOwnPropertyNames(x.v);
-    var yKeys = Object.getOwnPropertyNames(y.v);
-    xKeys.sort();
-    yKeys.sort();
+    var xKeys = x.v.keys, xValues = x.v.values;
+    var yKeys = y.v.keys, yValues = y.v.values;
     var it1 = 0;
     var it2 = 0;
     while (true) {
-        if (it1 >= xKeys.length) return it2 >= yKeys.length ? 0 : -1;
-        if (it2 >= yKeys.length) return 1;
-        var xKey = xKeys[it1];
-        var yKey = yKeys[it2];
-        var ans = -compareTo(xKey, yKey);
-        if (ans !== 0) return ans;
-        ans = compareTo(x.v[xKey], y.v[yKey]);
-        if (ans !== 0) return ans;
+        if (it1 >= xKeys.length) {
+            return it2 >= yKeys.length ? 0 : -1;
+        }
+        if (it2 >= yKeys.length) {
+            return 1;
+        }
+        var result = -compareValues(xKeys[it1], yKeys[it2]);
+        if (result !== 0) {
+            return result;
+        }
+        result = compareValues(xValues[it1], yValues[it2]);
+        if (result !== 0) {
+            return result;
+        }
         it1++;
         it2++;
     }
