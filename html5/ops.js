@@ -633,6 +633,15 @@ var STORE;
             3,
             1
         ),
+        "RANDOM": makeOp(
+            function RANDOM(state) {
+                // TODO: We should rethink this API with cryptographic
+                // randomness in mind. (JS numbers don't have enough bits).
+                state.frame.stack.push(newNumber(Math.random()));
+            },
+            0,
+            1
+        ),
         "RETURN": makeOp(
             function RETURN(state) {
                 var result = state.frame.stack.pop();
