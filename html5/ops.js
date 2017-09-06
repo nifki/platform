@@ -371,6 +371,32 @@ var STORE;
             1,
             1
         ),
+        "CONTAINS": makeOp(
+            function CONTAINS(state) {
+                var k = state.frame.stack.pop();
+                var t = state.frame.stack.pop();
+                var result;
+                if (t.type === "string") {
+                    if (k.type === "number") {
+                        var index = k.v | 0;
+                        result = (
+                            k.v === index && index >= 0 && index < t.v.length
+                        );
+                    } else {
+                        result = false;
+                    }
+                } else if (t.type === "table") {
+                    result = tableGet(t, k) !== null;
+                } else if (t.type === "object") {
+                    result = (typeof t.v[k.v]) !== "undefined";
+                } else {
+                    throw "Type error: cannot subscript " + valueToString(t);
+                }
+                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+            },
+            2,
+            1
+        ),
         "DROP": makeOp(
             function DROP(state) {
                 state.frame.stack.pop();
@@ -808,8 +834,12 @@ var STORE;
     LLOAD = function LLOAD(index, name) {
         return makeOp(
             function LLOAD(state) {
-                state.frame.stack.push(
-                    state.frame.locals[index]);
+                var value = state.frame.locals[index];
+                // `value === null` is just paranoia. It might be impossible.
+                if (typeof value === "undefined" || value === null) {
+                    throw "Local variable " + index + " not defined";
+                }
+                state.frame.stack.push(value);
             },
             0,
             1
@@ -819,7 +849,11 @@ var STORE;
     LOAD = function LOAD(index, name) {
         return makeOp(
             function LOAD(state) {
-                state.frame.stack.push(state.globals[index]);
+                var value = state.globals[index];
+                if (typeof value === "undefined" || value === null) {
+                    throw "Global variable " + name + " not defined";
+                }
+                state.frame.stack.push(value);
             },
             0,
             1
