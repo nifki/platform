@@ -183,8 +183,7 @@ var assemble = function() {
                         parseBlock(0, 1, numLoops + 1);
                         sp++;
                         expect("WHILE");
-                        append(OPS.WHILE);
-                        sp--;
+                        appendAndUpdateSP(OPS.WHILE);
                         // Parse the loop body.
                         parseBlock(0, 0, numLoops + 1);
                         expect("NEXT");
@@ -201,12 +200,12 @@ var assemble = function() {
                                 "Stack should contain 1 item " +
                                 "(the table or string) before executing FOR");
                         }
+                        sp--;
                         next();
                         var slot = allocate();
                         var loopPC = instructions.length;
                         // Parse the loop body.
                         parseBlock(2, 0, numLoops + 1);
-                        sp--;
                         expect("NEXT");
                         append(OPS.NEXT);
                         var elsePC = instructions.length;
