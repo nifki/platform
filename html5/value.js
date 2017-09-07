@@ -67,10 +67,6 @@ function newTable() {
     return VALUE_EMPTY_TABLE;
 }
 
-function isEmptyTable(value) {
-    return value === VALUE_EMPTY_TABLE;
-}
-
 /** Returns negative, zero or positive indicating x < y, x == y, x > y
  * respectively, or throws if x and y are not comparable.
  *
@@ -91,6 +87,11 @@ function isEmptyTable(value) {
  */
 // TODO: Test this thoroughly.
 function compareValues(x, y) {
+    function jsCmp(x, y) {
+        if (x < y) return -1;
+        if (y < x) return 1;
+        return 0;
+    }
     var xTypeIndex = TYPE_INDEX[x.type];
     var yTypeIndex = TYPE_INDEX[y.type];
     if (xTypeIndex > 5) throw x.type + " is not a comparable type";
@@ -98,12 +99,11 @@ function compareValues(x, y) {
     if (xTypeIndex !== yTypeIndex) return xTypeIndex - yTypeIndex;
     if (xTypeIndex < 4) {
         // JavaScript's semantics for boolean/number/string match ours.
-        if (x.v < y.v) return -1;
-        if (y.v < x.v) return 1;
-        return 0;
+        return jsCmp(x.v, y.v);
     }
     if (xTypeIndex === 5) {
-        return compareValues(x.v.originalName, y.v.originalName);
+        throw "Picture comparison not yet implemented";
+        // return jsCmp(x.originalName, y.originalName);
     }
     var xKeys = x.v.keys, xValues = x.v.values;
     var yKeys = y.v.keys, yValues = y.v.values;
@@ -127,82 +127,6 @@ function compareValues(x, y) {
         it1++;
         it2++;
     }
-}
-
-// Helper: Returns the point at which to insert/overwrite the element.
-function sortedArrayFind(array, element) {
-    var len = array.length;
-    var start = 0, end = len;
-    while (start < end) {
-        var i = (start + end) >> 1;
-        if (compareValues(array[i], element) < 0) {
-            start = i + 1;
-        } else {
-            end = i;
-        }
-    }
-    return start;
-}
-
-function tablePut(table, key, value) {
-    if (TYPE_INDEX[key.type] > 5) {
-        throw "'" + valueToString(key) + "' cannot be used as key in a table";
-    }
-    if (table.type !== "table") {
-        throw "'" + valueToString(table) + "' is not a table";
-    }
-    var keys = table.v.keys;
-    var newKeys = keys.slice();
-    var newValues = table.v.values.slice();
-    // Insert/overwrite preserving sorted order.
-    var i = sortedArrayFind(keys, key);
-    if (i < keys.length && compareValues(keys[i], key) === 0) {
-        newKeys[i] = key;
-        newValues[i] = value;
-    } else {
-        // Insert key and value at position `i`.
-        newKeys.splice(i, 0, key);
-        newValues.splice(i, 0, value);
-    }
-    return {"type": "table", "v": {"keys": newKeys, "values": newValues}};
-}
-
-function tableGet(table, key) {
-    var keys = table.v.keys;
-    var i = sortedArrayFind(keys, key);
-    if (i < keys.length && compareValues(keys[i], key) === 0) {
-        return table.v.values[i];
-    }
-    return null;
-}
-
-function tableIterator(table) {
-    var keys = table.v.keys;
-    if (keys.length === 0) {
-        return null;
-    }
-    var values = table.v.values;
-    var iterItem = {
-        "key": keys[0],
-        "value": values[0],
-        "next": null  // Set below.
-    };
-    var i = 0;
-    function tableIteratorNext() {
-        i++;
-        if (i >= keys.length) {
-            return null;
-        }
-        iterItem.key = keys[i];
-        iterItem.value = values[i];
-        return iterItem;
-    }
-    iterItem.next = tableIteratorNext;
-    return iterItem;
-}
-
-function tableSize(table) {
-    return table.v.keys.length;
 }
 
 function valueToString(value) {
@@ -229,7 +153,6 @@ function valueToLongString(value) {
     var v = value.v;
     var i, result, sep, keys, key;
     if (value.type === "table") {
-        // TODO: Sort order?
         result = "[";
         sep = "";
         keys = v.keys;
@@ -242,7 +165,6 @@ function valueToLongString(value) {
         }
         return result + "]";
     } else if (value.type === "object") {
-        // TODO: Sort order?
         result = valueToString(value) + "(";
         sep = "";
         keys = Object.getOwnPropertyNames(v);
