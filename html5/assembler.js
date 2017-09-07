@@ -149,7 +149,63 @@ var assemble = function() {
                     wordMatch[5] !== "DEF"
                 ) {
                     var instruction = null;
-                    if (word === "IF") {
+                    if (word === ";") {
+                        if (sp !== 0) {
+                            throw syntaxException(
+                                "Stack should be empty before executing ;");
+                        }
+                    } else if (word === "BREAK") {
+                        if (sp != 0) {
+                            throw syntaxException(
+                                "Stack should be empty before executing BREAK"
+                            );
+                        }
+                        // Glob up as many "BREAK"s as possible.
+                        var numBreaks = 0;
+                        while (word === "BREAK") {
+                            numBreaks++;
+                            next();
+                        }
+                        if (numBreaks > numLoops) {
+                            throw syntaxException(
+                                numBreaks + " BREAK instructions, " +
+                                "but only " + numLoops + " enclosing loops");
+                        }
+                        append(BREAK(numBreaks));
+                        return;
+                    } else if (word === "ERROR") {
+                        if (sp != 1) {
+                            throw syntaxException(
+                                "Stack should contain 1 item (the result) " +
+                                "before executing ERROR");
+                        }
+                        // FIXME:
+                        // this.append(ERROR);
+                        // this.next();
+                        // return;
+                        throw "ERROR instruction not yet implemented";
+                        // It wasn't implemented in the Java either.
+                    } else if (word === "FOR") {
+                        if (sp != 1) {
+                            throw syntaxException(
+                                "Stack should contain 1 item " +
+                                "(the table or string) before executing FOR");
+                        }
+                        sp--;
+                        next();
+                        var slot = allocate();
+                        var loopPC = instructions.length;
+                        // Parse the loop body.
+                        parseBlock(2, 0, numLoops + 1);
+                        expect("NEXT");
+                        append(OPS.NEXT);
+                        var elsePC = instructions.length;
+                        // Parse the "ELSE" block.
+                        parseBlock(0, 0, numLoops);
+                        expect("ELSE");
+                        var breakPC = instructions.length;
+                        slot(FOR(loopPC, elsePC, breakPC));
+                    } else if (word === "IF") {
                         if (sp != 1) {
                             throw syntaxException(
                                 "Stack should contain 1 item " +
@@ -194,26 +250,15 @@ var assemble = function() {
                         expect("ELSE");
                         var breakPC = instructions.length;
                         slot(LOOP(loopPC, elsePC, breakPC));
-                    } else if (word === "FOR") {
+                    } else if (word === "RETURN") {
                         if (sp != 1) {
                             throw syntaxException(
-                                "Stack should contain 1 item " +
-                                "(the table or string) before executing FOR");
+                                "Stack should contain 1 item (the result) " +
+                                "before executing RETURN");
                         }
-                        sp--;
+                        append(OPS.RETURN);
                         next();
-                        var slot = allocate();
-                        var loopPC = instructions.length;
-                        // Parse the loop body.
-                        parseBlock(2, 0, numLoops + 1);
-                        expect("NEXT");
-                        append(OPS.NEXT);
-                        var elsePC = instructions.length;
-                        // Parse the "ELSE" block.
-                        parseBlock(0, 0, numLoops);
-                        expect("ELSE");
-                        var breakPC = instructions.length;
-                        slot(FOR(loopPC, elsePC, breakPC));
+                        return;
                     } else if (typeof wordMatch[2] !== "undefined") {
                         // String literal.
                         if (wordMatch[3] === "") {
@@ -256,51 +301,6 @@ var assemble = function() {
                             throw syntaxException(
                                 "Unknown instruction: " + word);
                         }
-                    } else if (word === ";") {
-                        if (sp !== 0) {
-                            throw syntaxException(
-                                "Stack should be empty before executing ;");
-                        }
-                    } else if (word === "BREAK") {
-                        if (sp != 0) {
-                            throw syntaxException(
-                                "Stack should be empty before executing BREAK"
-                            );
-                        }
-                        // Glob up as many "BREAK"s as possible.
-                        var numBreaks = 0;
-                        while (word === "BREAK") {
-                            numBreaks++;
-                            next();
-                        }
-                        if (numBreaks > numLoops) {
-                            throw syntaxException(
-                                numBreaks + " BREAK instructions, " +
-                                "but only " + numLoops + " enclosing loops");
-                        }
-                        append(BREAK(numBreaks));
-                        return;
-                    } else if (word === "RETURN") {
-                        if (sp != 1) {
-                            throw syntaxException(
-                                "Stack should contain 1 item (the result) " +
-                                "before executing RETURN");
-                        }
-                        append(OPS.RETURN);
-                        next();
-                        return;
-                    } else if (word === "ERROR") {
-                        if (sp != 1) {
-                            throw syntaxException(
-                                "Stack should contain 1 item (the result) " +
-                                "before executing ERROR");
-                        }
-                        // FIXME:
-                        // this.append(ERROR);
-                        // this.next();
-                        // return;
-                        throw "ERROR instruction not yet implemented";
-                        // It wasn't implemented in the Java either.
                     } else {
                         if (!(word in OPS)) {
                             throw syntaxException(
