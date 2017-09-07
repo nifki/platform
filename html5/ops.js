@@ -1,6 +1,5 @@
 "use strict";
 
-var OPS;
 var BREAK;
 var CONSTANT;
 var FOR;
@@ -12,6 +11,7 @@ var LOOP;
 var LSTORE;
 var SET;
 var STORE;
+var OPS;
 
 (function() {
     function makeOp(func, pops, pushes) {
@@ -19,6 +19,219 @@ var STORE;
         func.pushes = pushes;
         return func;
     }
+
+    BREAK = function BREAK(numLoops) {
+        return makeOp(
+            function BREAK(state) {
+                var i = 1;
+                while (i < numLoops) {
+                    state.frame.loop = state.frame.loop.enclosing;
+                    i++;
+                }
+                state.frame.pc = state.frame.loop.breakPC;
+                state.frame.loop = state.frame.loop.enclosing;
+            },
+            0,
+            0
+        );
+    };
+
+    /**
+     * @param {object} value - the value to push on the stack (see
+     * "value.txt").
+     */
+    CONSTANT = function CONSTANT(value) {
+        return makeOp(
+            function CONSTANT(state) {
+                state.frame.stack.push(value);
+            },
+            0,
+            1
+        );
+    };
+
+    /** The beginning of a "FOR ... NEXT ... ELSE" structure. */
+    FOR = function FOR(loopPC, elsePC, breakPC) {
+        return makeOp(
+            function FOR(state) {
+                function NEXT(state) {
+                    var loopState = state.frame.loop;
+                    if (loopState.it === null) {
+                        // Exit the loop.
+                        state.frame.loop = loopState.enclosing;
+                        state.frame.pc = elsePC;
+                    } else {
+                        // Execute the body of the loop.
+                        state.frame.stack.push(loopState.it.key);
+                        state.frame.stack.push(loopState.it.value);
+                        loopState.it = loopState.it.next();
+                        state.frame.pc = loopPC;
+                    }
+                }
+                var loopState = {
+                    "loopPC": loopPC,
+                    "elsePC": elsePC,
+                    "breakPC": breakPC,
+                    "enclosing": state.frame.loop,
+                    "next": NEXT,
+                    "it": null  // Set below.
+                };
+                var t = state.frame.stack.pop();
+                if (t.type === "number") {
+                    var d = t.v;
+                    var n = d | 0;
+                    if (n !== d) {
+                        throw d + " is not an integer";
+                    }
+                    var range = EMPTY_TABLE;
+                    for (var i=0; i < n; i++) {
+                        var v = newNumber(i);
+                        range = tablePut(range, v, v);
+                    }
+                    loopState.it = tableIterator(range);
+                } else if (t.type === "string") {
+                    var s = t.v;
+                    var range = EMPTY_TABLE;
+                    for (var i=0; i < s.length; i++) {
+                        var k = newNumber(i);
+                        var v = newString(s.substring(i, i+1));
+                        range = tablePut(range, k, v);
+                    }
+                    loopState.it = tableIterator(range);
+                } else if (t.type === "table") {
+                    loopState.it = tableIterator(t.v);
+                } else {
+                    throw "Can't iterate through " + valueToString(t);
+                }
+                state.frame.loop = loopState;
+                NEXT(state);
+            },
+            1,
+            2
+        );
+    };
+
+    GOTO = function GOTO(targetPC) {
+        return makeOp(
+            function GOTO(state) {
+                state.frame.pc = targetPC;
+            },
+            0,
+            0
+        );
+    };
+
+    IF = function IF(targetPC) {
+        return makeOp(
+            function IF(state) {
+                var cond = state.frame.stack.pop();
+                if (cond.type !== "boolean") {
+                    throw (
+                        "IF requires a boolean, not '" + valueToString(cond) +
+                        "'"
+                    );
+                }
+                if (cond.v === false) {
+                    state.frame.pc = targetPC;
+                }
+            },
+            1,
+            0
+        );
+    };
+
+    LLOAD = function LLOAD(index, name) {
+        return makeOp(
+            function LLOAD(state) {
+                var value = state.frame.locals[index];
+                // `value === null` is just paranoia. It might be impossible.
+                if (typeof value === "undefined" || value === null) {
+                    throw "Local variable " + index + " not defined";
+                }
+                state.frame.stack.push(value);
+            },
+            0,
+            1
+        );
+    };
+
+    LOAD = function LOAD(index, name) {
+        return makeOp(
+            function LOAD(state) {
+                var value = state.globals[index];
+                if (typeof value === "undefined" || value === null) {
+                    throw "Global variable " + name + " not defined";
+                }
+                state.frame.stack.push(value);
+            },
+            0,
+            1
+        );
+    };
+
+    /** The beginning of a "LOOP ... WHILE ... NEXT ... ELSE" structure. */
+    LOOP = function LOOP(loopPC, elsePC, breakPC) {
+        return makeOp(
+            function LOOP(state) {
+                state.frame.loop = {
+                    "loopPC": loopPC,
+                    "elsePC": elsePC,
+                    "breakPC": breakPC,
+                    "enclosing": state.frame.loop,
+                    "next": function NEXT(state) {
+                        state.frame.pc = loopPC;
+                    }
+                };
+            },
+            0,
+            0
+        );
+    };
+
+    LSTORE = function LSTORE(index, name) {
+        return makeOp(
+            function LSTORE(state) {
+                state.frame.locals[index] = state.frame.stack.pop();
+            },
+            1,
+            0
+        );
+    };
+
+    SET = function SET(name) {
+        return makeOp(
+            function SET(state) {
+                var v = state.frame.stack.pop();
+                var o = state.frame.stack.pop();
+                if (o.type !== "object") {
+                    throw (
+                        "Cannot apply SET to " + valueToString(o) +
+                        "; an object is required"
+                    );
+                }
+                var old = o.v[name];
+                if (old.type !== v.type) {
+                    throw (
+                        "SET " + valueToString(o) + "." + name +
+                        " = " + valueToString(v)
+                    );
+                }
+                o.v[name] = v;
+            },
+            2,
+            0
+        );
+    };
+
+    STORE = function STORE(index, name) {
+        return makeOp(
+            function STORE(state) {
+                state.globals[index] = state.frame.stack.pop();
+            },
+            1,
+            0
+        );
+    };
 
     OPS = {
         "+": makeOp(
@@ -30,12 +243,13 @@ var STORE;
                 } else if (x.type === "string" && y.type === "string") {
                     state.frame.stack.push(newString(x.v + y.v));
                 } else if (x.type === "table" && y.type === "table") {
-                    var it = tableIterator(y);
+                    var result = x.v;
+                    var it = tableIterator(y.v);
                     while (it !== null) {
-                        x = tablePut(x, it.key, it.value);
+                        result = tablePut(result, it.key, it.value);
                         it = it.next();
                     }
-                    state.frame.stack.push(x);
+                    state.frame.stack.push(newTable(result));
                 } else {
                     throw (
                         "Cannot add " + valueToString(x) + " to " +
@@ -83,15 +297,15 @@ var STORE;
                     var result = xStr.substring(0, xStr.length - yInt);
                     state.frame.stack.push(newString(result));
                 } else if (x.type === "table" && y.type === "table") {
-                    var result = newTable();
-                    var it = tableIterator(x);
+                    var result = EMPTY_TABLE;
+                    var it = tableIterator(x.v);
                     while (it !== null) {
-                        if (tableGet(y, it.key) === null) {
+                        if (tableGet(y.v, it.key) === null) {
                             result = tablePut(result, it.key, it.value);
                         }
                         it = it.next();
                     }
-                    state.frame.stack.push(result);
+                    state.frame.stack.push(newTable(result));
                 } else {
                     throw (
                         "Cannot subtract " + valueToString(y) + " from " +
@@ -181,15 +395,15 @@ var STORE;
                         newString(xStr.substring(xStr.length - yInt))
                     );
                 } else if (x.type === "table" && y.type === "table") {
-                    var result = newTable();
-                    var it = tableIterator(x);
+                    var result = EMPTY_TABLE;
+                    var it = tableIterator(x.v);
                     while (it !== null) {
-                        if (tableGet(y, it.key) !== null) {
+                        if (tableGet(y.v, it.key) !== null) {
                             result = tablePut(result, it.key, it.value);
                         }
                         it = it.next();
                     }
-                    state.frame.stack.push(result);
+                    state.frame.stack.push(newTable(result));
                 } else {
                     throw (
                         "Cannot divide " + valueToString(x) + " by " +
@@ -386,7 +600,7 @@ var STORE;
                         result = false;
                     }
                 } else if (t.type === "table") {
-                    result = tableGet(t, k) !== null;
+                    result = tableGet(t.v, k) !== null;
                 } else if (t.type === "object") {
                     result = (typeof t.v[k.v]) !== "undefined";
                 } else {
@@ -402,7 +616,7 @@ var STORE;
                 var k = state.frame.stack.pop();
                 var t = state.frame.stack.pop();
                 if (t.type === "table") {
-                    var v = tableGet(t, k);
+                    var v = tableGet(t.v, k);
                     if (v === null) {
                         throw (
                             valueToString(t) + "[" + valueToString(k) +
@@ -413,9 +627,10 @@ var STORE;
                     state.frame.stack.push(k);
                     state.frame.stack.push(v);
                 } else {
-                    // The Java version said "Cannot assign to ..."
+                    // This instruction is only used to implement assignment
+                    // to a value in a table.
                     throw (
-                        "Cannot access " + valueToString(t) + "[" +
+                        "Cannot assign to " + valueToString(t) + "[" +
                         valueToString(k) + "]; a table is required"
                     );
                 }
@@ -433,7 +648,7 @@ var STORE;
         "DROPTABLE": makeOp(
             function DROPTABLE(state) {
                 var value = state.frame.stack.pop();
-                if (!isEmptyTable(value)) {
+                if (value.type !== "table" || tableSize(value.v) !== 0) {
                     throw (
                         "A function can be called as a subroutine only if " +
                         "it returns [] (the empty table)"
@@ -462,13 +677,7 @@ var STORE;
             0,
             0
         ),
-        "FALSE": makeOp(
-            function FALSE(state) {
-                state.frame.stack.push(VALUE_FALSE);
-            },
-            0,
-            1
-        ),
+        "FALSE": CONSTANT(VALUE_FALSE),
         "FLOOR": makeOp(
             function FLOOR(state) {
                 var x = state.frame.stack.pop();
@@ -511,7 +720,7 @@ var STORE;
                         );
                     }
                 } else if (t.type === "table") {
-                    result = tableGet(t, k);
+                    result = tableGet(t.v, k);
                 } else if (t.type === "object") {
                     if (k.type !== "string") {
                         throw (
@@ -540,7 +749,7 @@ var STORE;
                 if (x.type === "string") {
                     state.frame.stack.push(newNumber(x.v.length));
                 } else if (x.type === "table") {
-                    state.frame.stack.push(newNumber(tableSize(x)));
+                    state.frame.stack.push(newNumber(tableSize(x.v)));
                 } else {
                     throw "Cannot apply LEN to " + valueToString(x);
                 }
@@ -628,7 +837,17 @@ var STORE;
                 var v = stack.pop();
                 var k = stack.pop();
                 var t = stack.pop();
-                stack.push(tablePut(t, k, v));
+                if (TYPE_INDEX[k.type] > 5) {
+                    throw (
+                        "'" + valueToString(k) +
+                        "' cannot be used as key in a table"
+                    );
+                }
+                if (t.type !== "table") {
+                    throw "'" + valueToString(t) + "' is not a table";
+                }
+                var result = tablePut(t.v, k, v);
+                stack.push(newTable(result));
             },
             3,
             1
@@ -683,20 +902,8 @@ var STORE;
             1,
             1
         ),
-        "TABLE": makeOp(
-            function TABLE(state) {
-                state.frame.stack.push(newTable());
-            },
-            0,
-            1
-        ),
-        "TRUE": makeOp(
-            function TRUE(state) {
-                state.frame.stack.push(VALUE_TRUE);
-            },
-            0,
-            1
-        ),
+        "TABLE": CONSTANT(newTable(EMPTY_TABLE)),
+        "TRUE": CONSTANT(VALUE_TRUE),
         "WAIT": makeOp(
             function WAIT(state) {
                 throw "WAIT";
@@ -744,218 +951,5 @@ var STORE;
             2,
             1
         )
-    };
-
-    BREAK = function BREAK(numLoops) {
-        return makeOp(
-            function BREAK(state) {
-                var i = 1;
-                while (i < numLoops) {
-                    state.frame.loop = state.frame.loop.enclosing;
-                    i++;
-                }
-                state.frame.pc = state.frame.loop.breakPC;
-                state.frame.loop = state.frame.loop.enclosing;
-            },
-            0,
-            0
-        );
-    };
-
-    /**
-     * @param {object} value - the value to push on the stack (see
-     * "value.txt").
-     */
-    CONSTANT = function CONSTANT(value) {
-        return makeOp(
-            function CONSTANT(state) {
-                state.frame.stack.push(value);
-            },
-            0,
-            1
-        );
-    };
-
-    /** The beginning of a "FOR ... NEXT ... ELSE" structure. */
-    FOR = function FOR(loopPC, elsePC, breakPC) {
-        return makeOp(
-            function FOR(state) {
-                function NEXT(state) {
-                    var loopState = state.frame.loop;
-                    if (loopState.it === null) {
-                        // Exit the loop.
-                        state.frame.loop = loopState.enclosing;
-                        state.frame.pc = elsePC;
-                    } else {
-                        // Execute the body of the loop.
-                        state.frame.stack.push(loopState.it.key);
-                        state.frame.stack.push(loopState.it.value);
-                        loopState.it = loopState.it.next();
-                        state.frame.pc = loopPC;
-                    }
-                }
-                var loopState = {
-                    "loopPC": loopPC,
-                    "elsePC": elsePC,
-                    "breakPC": breakPC,
-                    "enclosing": state.frame.loop,
-                    "next": NEXT,
-                    "it": null  // Set below.
-                };
-                var t = state.frame.stack.pop();
-                if (t.type === "number") {
-                    var d = t.v;
-                    var n = d | 0;
-                    if (n !== d) {
-                        throw d + " is not an integer";
-                    }
-                    var range = newTable();
-                    for (var i=0; i < n; i++) {
-                        var v = newNumber(i);
-                        range = tablePut(range, v, v);
-                    }
-                    loopState.it = tableIterator(range);
-                } else if (t.type === "string") {
-                    var s = t.v;
-                    var range = newTable();
-                    for (var i=0; i < s.length; i++) {
-                        var k = newNumber(i);
-                        var v = newString(s.substring(i, i+1));
-                        range = tablePut(range, k, v);
-                    }
-                    loopState.it = tableIterator(range);
-                } else if (t.type === "table") {
-                    loopState.it = tableIterator(t);
-                } else {
-                    throw "Can't iterate through " + valueToString(t);
-                }
-                state.frame.loop = loopState;
-                NEXT(state);
-            },
-            1,
-            2
-        );
-    };
-
-    GOTO = function GOTO(targetPC) {
-        return makeOp(
-            function GOTO(state) {
-                state.frame.pc = targetPC;
-            },
-            0,
-            0
-        );
-    };
-
-    IF = function IF(targetPC) {
-        return makeOp(
-            function IF(state) {
-                var cond = state.frame.stack.pop();
-                if (cond.type !== "boolean") {
-                    throw (
-                        "IF requires a boolean, not '" + valueToString(cond) +
-                        "'"
-                    );
-                }
-                if (cond.v === false) {
-                    state.frame.pc = targetPC;
-                }
-            },
-            1,
-            0
-        );
-    };
-
-    LLOAD = function LLOAD(index, name) {
-        return makeOp(
-            function LLOAD(state) {
-                var value = state.frame.locals[index];
-                // `value === null` is just paranoia. It might be impossible.
-                if (typeof value === "undefined" || value === null) {
-                    throw "Local variable " + index + " not defined";
-                }
-                state.frame.stack.push(value);
-            },
-            0,
-            1
-        );
-    };
-
-    LOAD = function LOAD(index, name) {
-        return makeOp(
-            function LOAD(state) {
-                var value = state.globals[index];
-                if (typeof value === "undefined" || value === null) {
-                    throw "Global variable " + name + " not defined";
-                }
-                state.frame.stack.push(value);
-            },
-            0,
-            1
-        );
-    };
-
-    /** The beginning of a "LOOP ... WHILE ... NEXT ... ELSE" structure. */
-    LOOP = function LOOP(loopPC, elsePC, breakPC) {
-        return makeOp(
-            function LOOP(state) {
-                state.frame.loop = {
-                    "loopPC": loopPC,
-                    "elsePC": elsePC,
-                    "breakPC": breakPC,
-                    "enclosing": state.frame.loop,
-                    "next": function NEXT(state) {
-                        state.frame.pc = loopPC;
-                    }
-                };
-            },
-            0,
-            0
-        );
-    };
-
-    LSTORE = function LSTORE(index, name) {
-        return makeOp(
-            function LSTORE(state) {
-                state.frame.locals[index] = state.frame.stack.pop();
-            },
-            1,
-            0
-        );
-    };
-
-    SET = function SET(name) {
-        return makeOp(
-            function SET(state) {
-                var v = state.frame.stack.pop();
-                var o = state.frame.stack.pop();
-                if (o.type !== "object") {
-                    throw (
-                        "Cannot apply SET to " + valueToString(o) +
-                        "; an object is required"
-                    );
-                }
-                var old = o.v[name];
-                if (old.type !== v.type) {
-                    throw (
-                        "SET " + valueToString(o) + "." + name +
-                        " = " + valueToString(v)
-                    );
-                }
-                o.v[name] = v;
-            },
-            2,
-            0
-        );
-    };
-
-    STORE = function STORE(index, name) {
-        return makeOp(
-            function STORE(state) {
-                state.globals[index] = state.frame.stack.pop();
-            },
-            1,
-            0
-        );
     };
 })();

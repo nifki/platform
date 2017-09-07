@@ -20,7 +20,6 @@ var TYPE_INDEX = {
 
 var VALUE_TRUE = {"type": "boolean", "v": true};
 var VALUE_FALSE = {"type": "boolean", "v": false};
-var VALUE_EMPTY_TABLE = {"type": "table", "v": {"keys": [], "values": []}};
 
 function newNumber(v) {
     if (typeof v !== "number" || !isFinite(v)) {
@@ -63,8 +62,12 @@ var newObject = (function() {
     return newObject;
 })();
 
-function newTable() {
-    return VALUE_EMPTY_TABLE;
+/** `v` is a table as defined in "table.js". */
+function newTable(v) {
+    if (typeof v !== "object") {
+        throw "IllegalArgumentException: " + v;
+    }
+    return {"type": "table", "v": v};
 }
 
 /** Returns negative, zero or positive indicating x < y, x == y, x > y

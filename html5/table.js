@@ -1,5 +1,15 @@
 "use strict";
 
+/*
+ * A table contains an array of keys and an array of values. Each key and each
+ * value is a Nifki value. The keys are comparable and in sorted order.
+ */
+
+// TODO: Inject key comparator so as to avoid the dependency on
+// `compareValues()`.
+
+var EMPTY_TABLE = {"keys": [], "values": []};
+
 // Helper: Returns the point at which to insert/overwrite the element.
 function sortedArrayFind(array, element) {
     var len = array.length;
@@ -15,24 +25,14 @@ function sortedArrayFind(array, element) {
     return start;
 }
 
-function isEmptyTable(value) {
-    return value === VALUE_EMPTY_TABLE;
-}
-
 function tableSize(table) {
-    return table.v.keys.length;
+    return table.keys.length;
 }
 
 function tablePut(table, key, value) {
-    if (TYPE_INDEX[key.type] > 5) {
-        throw "'" + valueToString(key) + "' cannot be used as key in a table";
-    }
-    if (table.type !== "table") {
-        throw "'" + valueToString(table) + "' is not a table";
-    }
-    var keys = table.v.keys;
+    var keys = table.keys;
     var newKeys = keys.slice();
-    var newValues = table.v.values.slice();
+    var newValues = table.values.slice();
     // Insert/overwrite preserving sorted order.
     var i = sortedArrayFind(keys, key);
     if (i < keys.length && compareValues(keys[i], key) === 0) {
@@ -43,24 +43,26 @@ function tablePut(table, key, value) {
         newKeys.splice(i, 0, key);
         newValues.splice(i, 0, value);
     }
-    return {"type": "table", "v": {"keys": newKeys, "values": newValues}};
+    return {"keys": newKeys, "values": newValues};
 }
 
 function tableGet(table, key) {
-    var keys = table.v.keys;
+    var keys = table.keys;
     var i = sortedArrayFind(keys, key);
     if (i < keys.length && compareValues(keys[i], key) === 0) {
-        return table.v.values[i];
+        return table.values[i];
     }
     return null;
 }
 
 function tableIterator(table) {
-    var keys = table.v.keys;
+    var keys = table.keys;
     if (keys.length === 0) {
         return null;
     }
-    var values = table.v.values;
+    var values = table.values;
+    // TODO: Make this object immutable.
+    // Currently `next()` captures the mutable variable `i`.
     var iterItem = {
         "key": keys[0],
         "value": values[0],
