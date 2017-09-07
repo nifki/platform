@@ -1,0 +1,14 @@
+Maybe factor out tableAdd, tableSub, tableDiv and similar to permit optimised implementation?
+
+TODO: state.frame.loop should be initialised in "interpreter.js".
+
+Move loop logic into interpreter.js?
+
+Move call logic into interpreter.js?
+
+Discuss:
+    // TODO: We should rethink this API with cryptographic
+    // randomness in mind. (JS numbers don't have enough bits).
+
+Loop through number/string: did we really construct a table?
+
