@@ -743,6 +743,14 @@ var OPS;
             2,
             1
         ),
+        "KEYS": makeOp(
+            function KEYS(state) {
+                var result = getKeys();
+                state.frame.stack.push(newTable(result));
+            },
+            0,
+            1
+        ),
         "LEN": makeOp(
             function LEN(state) {
                 var x = state.frame.stack.pop();
