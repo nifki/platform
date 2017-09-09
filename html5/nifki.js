@@ -27,6 +27,22 @@ function rgb(r, g, b) {
 }
 
 function render(state) {
+    function drawOrderCompare(spriteA, spriteB) {
+        if (spriteA.objNum === spriteB.objNum) { return 0; }
+        var aDepth = spriteA.v.Depth.v, bDepth = sprite.v.Depth.v;
+        if (aDepth !== bDepth) { return aDepth - bDepth; }
+        var aX = spriteA.v.X.v, bX = sprite.v.X.v;
+        if (aX !== bX) { return aX - bX; }
+        var aY = spriteA.v.Y.v, bY = sprite.v.Y.v;
+        if (aY !== bY) { return aY - bY; }
+        var aName = spriteA.v.Picture.originalName;
+        var bName = spriteB.v.Picture.originalName;
+        if (aName < bName) { return -1; }
+        if (bName < aName) { return 1; }
+        return 0;
+    }
+    // TODO: Preserve the context across frames?
+    // Don't touch it if the window is unchanged?
     var ctx = state.platform.context2d;
     ctx.save();
     var win = state.window.v;
@@ -34,8 +50,30 @@ function render(state) {
     ctx.fillRect(0.0, 0.0, 1.0, 1.0);
     ctx.scale(1.0/win.W.v, 1.0/win.H.v);
     ctx.translate(-win.X.v, -win.Y.v);
-    for (var i=0; i < state.images.length; i++) {
-        ctx.drawImage(state.images[i], 32*i, 32*i);
+    var spritesToDraw = [];
+    for (var spriteNum in state.visibleSprites) {
+        var sprite = state.visibleSprites[spriteNum];
+        if (sprite.v.IsVisible.v) {
+            spritesToDraw.push(sprite);
+        }
+    }
+    spritesToDraw.sort(drawOrderCompare);
+    for (var i=0; i < spritesToDraw.length; i++) {
+        var sprite = spritesToDraw[i];
+        var image = sprite.v.Picture.v;
+        var x = sprite.v.X.v;
+        var y = sprite.v.Y.v;
+        var w = sprite.v.W.v;
+        var h = sprite.v.H.v;
+        ctx.drawImage(image, x, y, w, h);
+    }
+    var spriteNums = Object.keys(state.visibleSprites);
+    for (var i=0; i < spriteNums.length; i++) {
+        var spriteNum = spriteNums[i];
+        var sprite = state.visibleSprites[spriteNum];
+        if (!sprite.v.IsVisible.v) {
+            delete state.visibleSprites[spriteNum];
+        }
     }
     ctx.restore();
 }
@@ -60,9 +98,16 @@ function doFrame(state) {
             return;
         }
         // Show the error to the user.
-        console.log(e);
+        console.log(e, "at PC", state.frame.pc-1, instructions[state.frame.pc-1]);
         throw e;
     }
+}
+
+function pictureNameFromFilename(filename) {
+    var parts = filename.split('/');
+    // TODO: Correct variable naming.
+    var pictureName = parts[parts.length - 1].replace('.png', 'PNG');
+    return pictureName;
 }
 
 function run(code, images, properties, canvasId) {
@@ -70,14 +115,31 @@ function run(code, images, properties, canvasId) {
     if (!context2d) {
         throw "2D canvas is not available";
     }
+    var globalValues = code.globalValues.slice();
+    var globalNames = code.globalNames.slice();
+    for (var i=0; i < images.length; i++) {
+        var name = pictureNameFromFilename(images[i].src);
+        var picture = newPicture(images[i], name);
+        if (name in code.globalMappings) {
+            var index = globalNames.indexOf(name);
+            if (index < 0) {
+                throw "Assertion failed";
+            }
+            globalValues[index] = picture;
+        } else {
+            globalValues.push(picture);
+            globalNames.push(name);
+        }
+    }
     var state = {
         "instructions": code.instructions,
-        "globals": code.globalValues,
-        "images": images,
+        "globals": globalValues,
+        "globalNames": globalNames,
         "platform": {
             "context2d": context2d,
             "intervalId": null
         },
+        "visibleSprites": {},
         "window": newObject("WINDOW", {
             "X": newNumber(0),
             "Y": newNumber(0),
@@ -85,8 +147,8 @@ function run(code, images, properties, canvasId) {
             "H": newNumber(properties.h),
             "R": newNumber(0),
             "G": newNumber(0),
-            "B": newNumber(0)
-            // "IsVisible": TODO
+            "B": newNumber(0),
+            "IsVisible": VALUE_TRUE
         }),
         "frame": newStackFrame(code.main, null)
     };

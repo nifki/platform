@@ -191,6 +191,11 @@ var OPS;
                         " = " + valueToString(v)
                     );
                 }
+                if (o.objType === "SPRITE") {
+                    // We store all touched sprites, and prune invisible ones
+                    // at render time.
+                    state.visibleSprites[o.objNum] = o;
+                }
                 o.v[name] = v;
             },
             2,
@@ -560,6 +565,16 @@ var OPS;
             1,
             1
         ),
+        "CLS": makeOp(
+            function CLS(state) {
+                for (var spriteNum in state.visibleSprites) {
+                    var sprite = state.visibleSprites[spriteNum];
+                    sprite.v.IsVisible = VALUE_FALSE;
+                }
+            },
+            0,
+            0
+        ),
         "CONTAINS": makeOp(
             function CONTAINS(state) {
                 var k = state.frame.stack.pop();
@@ -863,6 +878,32 @@ var OPS;
                     );
                 }
                 state.frame.stack.push(newNumber(Math.round(x.v)));
+            },
+            1,
+            1
+        ),
+        "SPRITE": makeOp(
+            function SPRITE(state) {
+                var picture = state.frame.stack.pop();
+                if (picture.type !== "picture") {
+                    throw (
+                        "Cannot apply SPRITE " + valueToString(picture) +
+                        "; a picture is required"
+                    );
+                }
+                var sprite = newObject(
+                    "SPRITE",  // Shown in long string representation.
+                    {
+                        "X": newNumber(0),
+                        "Y": newNumber(0),
+                        "W": newNumber(picture.v.width),
+                        "H": newNumber(picture.v.height),
+                        "Depth": newNumber(0),
+                        "Picture": picture,
+                        "IsVisible": VALUE_FALSE
+                    }
+                );
+                state.frame.stack.push(sprite);
             },
             1,
             1

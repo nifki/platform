@@ -35,6 +35,10 @@ function newString(v) {
     return {"type": "string", "v": v};
 }
 
+function newPicture(image, originalName) {
+    return {"type": "picture", "v": image, "originalName": originalName};
+}
+
 function newFunction(startPC, numLocals, originalName) {
     return {
         "type": "function",
@@ -143,6 +147,8 @@ function valueToString(value) {
         return v;
     } else if (value.type === "table") {
         return "TABLE(" + v.keys.length + " keys)";
+    } else if (value.type === "picture") {
+        return value.originalName;
     } else if (value.type === "function") {
         return value.originalName;
     } else if (value.type === "object") {
