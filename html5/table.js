@@ -56,28 +56,15 @@ function tableGet(table, key) {
 }
 
 function tableIterator(table) {
-    var keys = table.keys;
-    if (keys.length === 0) {
-        return null;
-    }
-    var values = table.values;
-    // TODO: Make this object immutable.
-    // Currently `next()` captures the mutable variable `i`.
-    var iterItem = {
-        "key": keys[0],
-        "value": values[0],
-        "next": null  // Set below.
-    };
-    var i = 0;
-    function tableIteratorNext() {
-        i++;
-        if (i >= keys.length) {
+    function newItem(i) {
+        if (i >= table.keys.length) {
             return null;
         }
-        iterItem.key = keys[i];
-        iterItem.value = values[i];
-        return iterItem;
+        return {
+            "key": table.keys[i],
+            "value": table.values[i],
+            "next": function next() { return newItem(i+1) }
+        };
     }
-    iterItem.next = tableIteratorNext;
-    return iterItem;
+    return newItem(0);
 }
