@@ -15,15 +15,15 @@ var KEY_CODES = {
     "BackSpace": 0x08,
     // Typewriter second row.
     "Tab": 0x09,
-    "OpenBracket": 0,  // My keyboard doesn't have this.
-    "CloseBracket": 0,  // My keyboard doesn't have this.
-    "LeftBrace": 0xDB,  // "["/"{"
-    "RightBrace": 0xDD,  // "]"/"}"
+    "OpenBracket": 0xDB,  // "["/"{"
+    "CloseBracket": 0xDD,  // "]"/"}"
+    "LeftBrace": 0,  // My keyboard doesn't have this.
+    "RightBrace": 0,  // My keyboard doesn't have this.
     "Enter": 0x0D,
     // Typewriter third row.
     "CapsLock": 0x14,
     "Semicolon": 0x3B,
-    "Quote": 0x32,  // That's shift-2. My keyboard has no separate quote key.
+    "Quote": 0xDE,
     "Hash": 0xA3,
     // Typewriter fourth row.
     "Shift": 0x10,
@@ -62,6 +62,7 @@ var KEY_CODES = {
 var KEY_NAMES = Object.getOwnPropertyNames(KEY_CODES);
 KEY_NAMES.sort();
 
+// Make an array of Nifki values representing the key names in sorted order.
 var KEY_NAME_VALUES = (function() {
     var result = [];
     for (var i=0; i < KEY_NAMES.length; i++) {
@@ -96,16 +97,19 @@ var getKeys = (function() {
             var state = keyStates[i];
             if (event.keyCode === KEY_CODES[key]) {
                 state = event.type === "keydown" ? VALUE_TRUE : VALUE_FALSE;
+                event.preventDefault();  // Consume this key press.
             }
             newKeyStates.push(state);
         }
         keyStates = newKeyStates;
-
-        event.preventDefault();  // Flag it to prevent duplication.
     }
 
-    window.addEventListener("keydown", onKeyEvent, true);
-    window.addEventListener("keyup", onKeyEvent, true);
+    var canvas = document.getElementById("game"); // TEMPORARY.
+    if (typeof canvas.tabIndex !== "number" || canvas.tabIndex < 0) {
+        canvas.tabIndex = 0;
+    }
+    canvas.addEventListener("keydown", onKeyEvent, true);
+    canvas.addEventListener("keyup", onKeyEvent, true);
 
     function getKeys() {
         return makeKeyStateTable(keyStates);
