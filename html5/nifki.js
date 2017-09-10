@@ -1,12 +1,19 @@
 "use strict";
 
-/** Returns a 2D drawing context (a CanvasRenderingContext2D) for rendering
- * the graphics. */
-function initCanvas(canvasId) {
+/**
+ * Returns a 2D drawing context (a CanvasRenderingContext2D) for rendering
+ * the graphics.
+ * @param canvasId - the ID of the HTML canvas element to use.
+ * @param width - the desired horizontal resolution in pixels.
+ * @param height - the desired vertical resolution in pixels.
+ */
+function initCanvas(canvasId, width, height) {
     var canvas = document.getElementById(canvasId);
     if (!canvas.getContext) return null;
     var ctx = canvas.getContext("2d");
     if (!ctx) return null;
+    canvas.width = width;
+    canvas.height = height;
     if (typeof ctx.imageSmoothingEnabled !== "undefined") {
         ctx.imageSmoothingEnabled = false;
     } else {
@@ -14,7 +21,7 @@ function initCanvas(canvasId) {
         ctx.webkitImageSmoothingEnabled = false;
         ctx.msImageSmoothingEnabled = false;
     }
-    ctx.scale(canvas.width, canvas.height);
+    ctx.scale(width, height);
     return ctx;
 }
 
@@ -29,11 +36,11 @@ function rgb(r, g, b) {
 function render(state) {
     function drawOrderCompare(spriteA, spriteB) {
         if (spriteA.objNum === spriteB.objNum) { return 0; }
-        var aDepth = spriteA.v.Depth.v, bDepth = sprite.v.Depth.v;
+        var aDepth = spriteA.v.Depth.v, bDepth = spriteB.v.Depth.v;
         if (aDepth !== bDepth) { return aDepth - bDepth; }
-        var aX = spriteA.v.X.v, bX = sprite.v.X.v;
+        var aX = spriteA.v.X.v, bX = spriteB.v.X.v;
         if (aX !== bX) { return aX - bX; }
-        var aY = spriteA.v.Y.v, bY = sprite.v.Y.v;
+        var aY = spriteA.v.Y.v, bY = spriteB.v.Y.v;
         if (aY !== bY) { return aY - bY; }
         var aName = spriteA.v.Picture.originalName;
         var bName = spriteB.v.Picture.originalName;
@@ -41,41 +48,44 @@ function render(state) {
         if (bName < aName) { return 1; }
         return 0;
     }
-    // TODO: Preserve the context across frames?
-    // Don't touch it if the window is unchanged?
+
     var ctx = state.platform.context2d;
     ctx.save();
+    // Set coordinate system and draw background.
     var win = state.window.v;
     ctx.fillStyle = rgb(win.R.v, win.G.v, win.B.v);
     ctx.fillRect(0.0, 0.0, 1.0, 1.0);
     ctx.scale(1.0/win.W.v, 1.0/win.H.v);
     ctx.translate(-win.X.v, -win.Y.v);
-    var spritesToDraw = [];
-    for (var spriteNum in state.visibleSprites) {
-        var sprite = state.visibleSprites[spriteNum];
-        if (sprite.v.IsVisible.v) {
-            spritesToDraw.push(sprite);
-        }
-    }
+    // Draw visible sprites.
+    var spritesToDraw = Object.values(state.visibleSprites);
     spritesToDraw.sort(drawOrderCompare);
     for (var i=0; i < spritesToDraw.length; i++) {
-        var sprite = spritesToDraw[i];
-        var image = sprite.v.Picture.v;
-        var x = sprite.v.X.v;
-        var y = sprite.v.Y.v;
-        var w = sprite.v.W.v;
-        var h = sprite.v.H.v;
+        var v = spritesToDraw[i].v;
+        var image = v.Picture.v;
+        var x = v.X.v;
+        var y = v.Y.v;
+        var w = v.W.v;
+        var h = v.H.v;
         ctx.drawImage(image, x, y, w, h);
     }
-    var spriteNums = Object.keys(state.visibleSprites);
-    for (var i=0; i < spriteNums.length; i++) {
-        var spriteNum = spriteNums[i];
-        var sprite = state.visibleSprites[spriteNum];
-        if (!sprite.v.IsVisible.v) {
-            delete state.visibleSprites[spriteNum];
+    ctx.restore();
+}
+
+/**
+ * Returns a fresh object mapping spriteNum to Sprite containing only those
+ * sprites for which `IsVisible` is true.
+ * @param visibleSprites an object mapping spriteNum to Sprite.
+ */
+function removeHiddenSprites(visibleSprites) {
+    var result = {};
+    for (var spriteNum in visibleSprites) {
+        var sprite = visibleSprites[spriteNum];
+        if (sprite.v.IsVisible.v) {
+            result[spriteNum] = sprite;
         }
     }
-    ctx.restore();
+    return result;
 }
 
 function doFrame(state) {
@@ -88,6 +98,7 @@ function doFrame(state) {
     } catch (e) {
         if (e === "WAIT") {
             // Draw a frame and wait to be called again.
+            state.visibleSprites = removeHiddenSprites(state.visibleSprites);
             render(state);
             return;
         }
@@ -111,7 +122,7 @@ function pictureNameFromFilename(filename) {
 }
 
 function run(code, images, properties, canvasId) {
-    var context2d = initCanvas(canvasId);
+    var context2d = initCanvas(canvasId, properties.w, properties.h);
     if (!context2d) {
         throw "2D canvas is not available";
     }
@@ -185,7 +196,7 @@ function onload() {
             run(
                 assemble(TEST_CODE),
                 images,
-                {"w": 256, "h": 256, "msPerFrame": 40},
+                {"w": 384, "h": 384, "msPerFrame": 40},
                 "game"
             );
         }
