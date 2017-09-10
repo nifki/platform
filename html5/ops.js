@@ -762,7 +762,7 @@ var OPS;
         ),
         "KEYS": makeOp(
             function KEYS(state) {
-                var result = getKeys();
+                var result = state.platform.getKeys();
                 state.frame.stack.push(newTable(result));
             },
             0,

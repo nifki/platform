@@ -7,8 +7,7 @@
  * @param width - the desired horizontal resolution in pixels.
  * @param height - the desired vertical resolution in pixels.
  */
-function initCanvas(canvasId, width, height) {
-    var canvas = document.getElementById(canvasId);
+function initCanvas(canvas, width, height) {
     if (!canvas.getContext) return null;
     var ctx = canvas.getContext("2d");
     if (!ctx) return null;
@@ -121,11 +120,12 @@ function pictureNameFromFilename(filename) {
     return pictureName;
 }
 
-function run(code, images, properties, canvasId) {
-    var context2d = initCanvas(canvasId, properties.w, properties.h);
+function run(code, images, properties, canvas) {
+    var context2d = initCanvas(canvas, properties.w, properties.h);
     if (!context2d) {
         throw "2D canvas is not available";
     }
+    var getKeys = installKeyListener(canvas);
     var globalValues = code.globalValues.slice();
     var globalNames = code.globalNames.slice();
     for (var i=0; i < images.length; i++) {
@@ -148,6 +148,7 @@ function run(code, images, properties, canvasId) {
         "globalNames": globalNames,
         "platform": {
             "context2d": context2d,
+            "getKeys": getKeys,
             "intervalId": null
         },
         "visibleSprites": {},
@@ -163,6 +164,7 @@ function run(code, images, properties, canvasId) {
         }),
         "frame": newStackFrame(code.main, null)
     };
+
     state.platform.intervalId = setInterval(
         doFrame,
         properties.msPerFrame,
@@ -189,7 +191,7 @@ function loadImagesThen(imageFilenames, callback) {
     }
 }
 
-function onload() {
+function onPageLoad() {
     loadImagesThen(
         [
             "Rocks_rockPNG",
@@ -206,10 +208,10 @@ function onload() {
                 assemble(TEST_CODE),
                 images,
                 {"w": 384, "h": 384, "msPerFrame": 40},
-                "game"
+                document.getElementById("game")
             );
         }
     );
 }
 
-window.addEventListener("DOMContentLoaded", onload, false);
+window.addEventListener("DOMContentLoaded", onPageLoad, false);

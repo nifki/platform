@@ -71,11 +71,14 @@ var KEY_NAME_VALUES = (function() {
     return result;
 })();
 
-var getKeys = (function() {
-    function makeKeyStateTable(values) {
-        return {"keys": KEY_NAME_VALUES, "values": values};
-    }
-
+/**
+ * Installs a keyboard event listener on `canvas` and returns a function.
+ *
+ * The returned function takes no arguments and returns the current keyboard
+ * state in the form of a table mapping each name in KEY_NAME_VALUES to a
+ * Nifki boolean.
+ */
+function installKeyListener(canvas) {
     var keyStates = [];
     for (var key in KEY_NAMES) {
         keyStates.push(VALUE_FALSE);
@@ -104,7 +107,6 @@ var getKeys = (function() {
         keyStates = newKeyStates;
     }
 
-    var canvas = document.getElementById("game"); // TEMPORARY.
     if (typeof canvas.tabIndex !== "number" || canvas.tabIndex < 0) {
         canvas.tabIndex = 0;
     }
@@ -112,7 +114,7 @@ var getKeys = (function() {
     canvas.addEventListener("keyup", onKeyEvent, true);
 
     function getKeys() {
-        return makeKeyStateTable(keyStates);
+        return {"keys": KEY_NAME_VALUES, "values": keyStates};
     }
     return getKeys;
-})();
+}
