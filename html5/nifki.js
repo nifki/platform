@@ -191,7 +191,16 @@ function loadImagesThen(imageFilenames, callback) {
 
 function onload() {
     loadImagesThen(
-        ["man.png", "boulder.png"],
+        [
+            "Rocks_rockPNG",
+            "Rocks_blankPNG",
+            "Rocks_leftPNG",
+            "Rocks_diamondPNG",
+            "Rocks_earthPNG",
+            "Rocks_manPNG",
+            "Rocks_rightPNG",
+            "Rocks_wallPNG"
+        ],
         function(images) {
             run(
                 assemble(TEST_CODE),
