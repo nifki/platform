@@ -109,8 +109,7 @@ function compareValues(x, y) {
         return jsCmp(x.v, y.v);
     }
     if (xTypeIndex === 5) {
-        throw "Picture comparison not yet implemented";
-        // return jsCmp(x.originalName, y.originalName);
+        return jsCmp(x.originalName, y.originalName);
     }
     var xKeys = x.v.keys, xValues = x.v.values;
     var yKeys = y.v.keys, yValues = y.v.values;
