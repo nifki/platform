@@ -14,6 +14,30 @@ var STORE;
 var OPS;
 
 (function() {
+    var dump = (function(){
+        // TODO: Adapt this when we do SSS unescaping.
+        var NEWLINE = '\\A/';
+        var buffer = '';
+        function dump(s) {
+            buffer += s;
+            var start = 0;
+            while (true) {
+                var index = buffer.indexOf(NEWLINE, start);
+                if (index < 0) {
+                    break;
+                }
+                console.log("DUMP: " + buffer.substring(start, index));
+                start = index + NEWLINE.length;
+                // TODO: Better buffer size limiting.
+                if (start > 1000) {
+                    buffer = buffer.substring(start);
+                    start = 0;
+                }
+            }
+        }
+        return dump;
+    })();
+
     function makeOp(func, pops, pushes) {
         func.pops = pops;
         func.pushes = pushes;
@@ -119,7 +143,10 @@ var OPS;
                 var value = state.frame.locals[index];
                 // `value === null` is just paranoia. It might be impossible.
                 if (typeof value === "undefined" || value === null) {
-                    throw "Local variable " + index + " not defined";
+                    throw (
+                        "Local variable " + index + " (" + name +
+                        ") not defined"  // The Java version omits "(<name>)"
+                    );
                 }
                 state.frame.stack.push(value);
             },
@@ -185,7 +212,7 @@ var OPS;
                     );
                 }
                 var old = o.v[name];
-                if (old.type !== v.type) {
+                if (typeof old === "undefined" || old.type !== v.type) {
                     throw (
                         "SET " + valueToString(o) + "." + name +
                         " = " + valueToString(v)
@@ -652,9 +679,9 @@ var OPS;
             function DUMP(state) {
                 var value = state.frame.stack.pop();
                 if (value.type === "string") {
-                    console.log("DUMP: " + value.v);
+                    dump(value.v);
                 } else {
-                    console.log("DUMP: " + valueToLongString(value));
+                    dump(valueToLongString(value));
                 }
             },
             1,
