@@ -11,6 +11,7 @@ function newStackFrame(func, caller) {
         "caller": caller,
         "pc": func.startPC,
         "locals": [],
-        "stack": []
+        "stack": [],
+        "loop": null
     };
 }

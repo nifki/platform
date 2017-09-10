@@ -182,3 +182,44 @@ function valueToLongString(value) {
         return valueToString(value);
     }
 }
+
+/**
+ * Returns an iterator through `value`, which can be a number, a string, or a
+ * table. A number `n` behaves like a table that maps `i` to `i` for each
+ * `0 <= i < n`. A string `s` of length `n` behaves like a table that maps
+ * `i` to `s[i]` for each `0 <= i < n`. Iterating through a table yields its
+ * (key, value) pairs in increasing order of key.
+ *
+ * An iterator is `null` (representing the empty sequence) or an object with
+ * the following fields:
+ * - key - the next key.
+ * - value - the corresponding value.
+ * - next - a function that takes no arguments and returns the remaining
+ * iterator.
+ */
+function valueIterator(value) {
+    var range = EMPTY_TABLE;
+    if (value.type === "number") {
+        var d = value.v;
+        var n = d | 0;
+        if (n !== d) {
+            throw d + " is not an integer";
+        }
+        for (var i=0; i < n; i++) {
+            var v = newNumber(i);
+            range = tablePut(range, v, v);
+        }
+    } else if (value.type === "string") {
+        var s = value.v;
+        for (var i=0; i < s.length; i++) {
+            var k = newNumber(i);
+            var v = newString(s.substring(i, i+1));
+            range = tablePut(range, k, v);
+        }
+    } else if (value.type === "table") {
+        range = value.v;
+    } else {
+        throw "Can't iterate through " + valueToString(t);
+    }
+    return tableIterator(range);
+}

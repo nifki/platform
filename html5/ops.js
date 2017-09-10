@@ -54,6 +54,7 @@ var OPS;
     FOR = function FOR(loopPC, elsePC, breakPC) {
         return makeOp(
             function FOR(state) {
+                var t = state.frame.stack.pop();
                 function NEXT(state) {
                     var loopState = state.frame.loop;
                     if (loopState.it === null) {
@@ -68,43 +69,15 @@ var OPS;
                         state.frame.pc = loopPC;
                     }
                 }
-                var loopState = {
+                state.frame.loop = {
                     "loopPC": loopPC,
                     "elsePC": elsePC,
                     "breakPC": breakPC,
                     "enclosing": state.frame.loop,
                     "next": NEXT,
-                    "it": null  // Set below.
+                    "it": valueIterator(t)
                 };
-                var t = state.frame.stack.pop();
-                if (t.type === "number") {
-                    var d = t.v;
-                    var n = d | 0;
-                    if (n !== d) {
-                        throw d + " is not an integer";
-                    }
-                    var range = EMPTY_TABLE;
-                    for (var i=0; i < n; i++) {
-                        var v = newNumber(i);
-                        range = tablePut(range, v, v);
-                    }
-                    loopState.it = tableIterator(range);
-                } else if (t.type === "string") {
-                    var s = t.v;
-                    var range = EMPTY_TABLE;
-                    for (var i=0; i < s.length; i++) {
-                        var k = newNumber(i);
-                        var v = newString(s.substring(i, i+1));
-                        range = tablePut(range, k, v);
-                    }
-                    loopState.it = tableIterator(range);
-                } else if (t.type === "table") {
-                    loopState.it = tableIterator(t.v);
-                } else {
-                    throw "Can't iterate through " + valueToString(t);
-                }
-                state.frame.loop = loopState;
-                NEXT(state);
+                state.frame.loop.next(state);
             },
             1,
             2
@@ -182,6 +155,8 @@ var OPS;
                         state.frame.pc = loopPC;
                     }
                 };
+                // FIXME: Branch to `loopPC`?
+                // state.frame.loop.next(state);
             },
             0,
             0
