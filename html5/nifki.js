@@ -34,18 +34,12 @@ function rgb(r, g, b) {
 
 function render(state) {
     function drawOrderCompare(spriteA, spriteB) {
-        if (spriteA.objNum === spriteB.objNum) { return 0; }
         var aDepth = spriteA.v.Depth.v, bDepth = spriteB.v.Depth.v;
-        if (aDepth !== bDepth) { return aDepth - bDepth; }
-        var aX = spriteA.v.X.v, bX = spriteB.v.X.v;
-        if (aX !== bX) { return aX - bX; }
-        var aY = spriteA.v.Y.v, bY = spriteB.v.Y.v;
-        if (aY !== bY) { return aY - bY; }
-        var aName = spriteA.v.Picture.originalName;
-        var bName = spriteB.v.Picture.originalName;
-        if (aName < bName) { return -1; }
-        if (bName < aName) { return 1; }
-        return 0;
+        if (aDepth !== bDepth) {
+            // N.B. Deeper objects are drawn first!
+            return bDepth - aDepth;
+        }
+        return spriteA.objNum - spriteB.objNum;
     }
 
     var ctx = state.platform.context2d;
