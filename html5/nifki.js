@@ -110,10 +110,12 @@ function doFrame(state) {
     }
 }
 
-function pictureNameFromFilename(filename) {
-    return filename.split('/').pop();
-}
-
+/**
+ * @param code - the result of `assemble()`.
+ * @param images - object mapping global variable name to Image.
+ * @param properties - object with fields "w", "h", "msPerFrame".
+ * @param canvas - canvas element.
+ */
 function run(code, images, properties, canvas) {
     var context2d = initCanvas(canvas, properties.w, properties.h);
     if (!context2d) {
@@ -121,9 +123,8 @@ function run(code, images, properties, canvas) {
     }
     var getKeys = installKeyListener(canvas);
     var globalValues = code.globalValues.slice();
-    for (var i=0; i < images.length; i++) {
-        var name = pictureNameFromFilename(images[i].src);
-        var picture = newPicture(images[i], name);
+    for (var name in images) {
+        var picture = newPicture(images[name], name);
         var index = code.globalMappings[name];
         if (typeof index === "undefined") {
             throw (
@@ -169,7 +170,7 @@ function run(code, images, properties, canvas) {
 
 function loadImagesThen(imageFilenames, callback) {
     var counter = imageFilenames.length;
-    var images = [];
+    var images = {};
 
     function count() {
         counter -= 1;
@@ -179,10 +180,11 @@ function loadImagesThen(imageFilenames, callback) {
     }
 
     for (var i=0; i < imageFilenames.length; i++) {
+        var name = imageFilenames[i];
         var image = new Image();
         image.onload = count;
-        image.src = imageFilenames[i];
-        images.push(image);
+        image.src = name;
+        images[name] = image;
     }
 }
 
