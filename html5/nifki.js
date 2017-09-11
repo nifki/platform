@@ -128,16 +128,19 @@ function run(code, images, properties, canvas) {
     for (var i=0; i < images.length; i++) {
         var name = pictureNameFromFilename(images[i].src);
         var picture = newPicture(images[i], name);
-        if (name in code.globalMappings) {
-            var index = globalNames.indexOf(name);
-            if (index < 0) {
-                throw "Assertion failed";
-            }
-            globalValues[index] = picture;
-        } else {
-            globalValues.push(picture);
-            globalNames.push(name);
+        var index = code.globalMappings[name];
+        if (typeof index === "undefined") {
+            throw (
+                "The picture '" + name + "' appears in resources.txt, " +
+                "but is not used"
+            );
         }
+        if (globalValues[index] !== null) {
+            throw (
+                "Global variable '" + name + "' is initialized more than once"
+            );
+        }
+        globalValues[index] = picture;
     }
     var state = {
         "instructions": code.instructions,
