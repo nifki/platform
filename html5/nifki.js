@@ -111,10 +111,7 @@ function doFrame(state) {
 }
 
 function pictureNameFromFilename(filename) {
-    var parts = filename.split('/');
-    // TODO: Correct variable naming.
-    var pictureName = parts[parts.length - 1].replace('.png', 'PNG');
-    return pictureName;
+    return filename.split('/').pop();
 }
 
 function run(code, images, properties, canvas) {
