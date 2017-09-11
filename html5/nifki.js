@@ -57,7 +57,10 @@ function render(state) {
     ctx.scale(1.0/win.W.v, 1.0/win.H.v);
     ctx.translate(-win.X.v, -win.Y.v);
     // Draw visible sprites.
-    var spritesToDraw = Object.values(state.visibleSprites);
+    var spritesToDraw = [];
+    for (var spriteNum in state.visibleSprites) {
+        spritesToDraw.push(state.visibleSprites[spriteNum]);
+    }
     spritesToDraw.sort(drawOrderCompare);
     for (var i=0; i < spritesToDraw.length; i++) {
         var v = spritesToDraw[i].v;
