@@ -59,18 +59,6 @@ var KEY_CODES = {
     }
 })();
 
-var KEY_NAMES = Object.getOwnPropertyNames(KEY_CODES);
-KEY_NAMES.sort();
-
-// Make an array of Nifki values representing the key names in sorted order.
-var KEY_NAME_VALUES = (function() {
-    var result = [];
-    for (var i=0; i < KEY_NAMES.length; i++) {
-        result.push(newString(KEY_NAMES[i]));
-    }
-    return result;
-})();
-
 /**
  * Installs a keyboard event listener on `canvas` and returns a function.
  *
@@ -79,11 +67,16 @@ var KEY_NAME_VALUES = (function() {
  * Nifki boolean.
  */
 function installKeyListener(canvas) {
-    var keyStates = [];
-    for (var key in KEY_NAMES) {
-        keyStates.push(VALUE_FALSE);
+    // Initially, all keys are unpressed.
+    var keyStates = EMPTY_TABLE; // Nifki string to Nifki boolean.
+    for (var key in KEY_CODES) {
+        keyStates = tablePut(keyStates, newString(key), VALUE_FALSE);
     }
-
+    // Ensure `canvas` is focusable.
+    if (typeof canvas.tabIndex !== "number" || canvas.tabIndex < 0) {
+        canvas.tabIndex = 0;
+    }
+    // Install KeyEvent handler.
     function onKeyEvent(event) {
         if (event.defaultPrevented) {
             return;
@@ -94,27 +87,16 @@ function installKeyListener(canvas) {
             return;
         }
 
-        var newKeyStates = [];
-        for (var i=0; i < KEY_NAMES.length; i++) {
-            var key = KEY_NAMES[i];
-            var state = keyStates[i];
+        var isDown = event.type === "keydown" ? VALUE_TRUE : VALUE_FALSE;
+        for (var key in KEY_CODES) {
             if (event.keyCode === KEY_CODES[key]) {
-                state = event.type === "keydown" ? VALUE_TRUE : VALUE_FALSE;
+                keyStates = tablePut(keyStates, newString(key), isDown);
                 event.preventDefault();  // Consume this key press.
             }
-            newKeyStates.push(state);
         }
-        keyStates = newKeyStates;
-    }
-
-    if (typeof canvas.tabIndex !== "number" || canvas.tabIndex < 0) {
-        canvas.tabIndex = 0;
     }
     canvas.addEventListener("keydown", onKeyEvent, true);
     canvas.addEventListener("keyup", onKeyEvent, true);
-
-    function getKeys() {
-        return {"keys": KEY_NAME_VALUES, "values": keyStates};
-    }
-    return getKeys;
+    // Return a way of getting the latest `keyStates` value.
+    return function() { return keyStates; }
 }
