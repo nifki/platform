@@ -16,23 +16,19 @@ var OPS;
 (function() {
     var dump = (function(){
         // TODO: Adapt this when we do SSS unescaping.
-        var NEWLINE = '\\A/';
-        var buffer = '';
+        var NEWLINE = "\\A/";
+        var buffer = "";
         function dump(s) {
-            buffer += s;
             var start = 0;
             while (true) {
-                var index = buffer.indexOf(NEWLINE, start);
+                var index = s.indexOf(NEWLINE, start);
                 if (index < 0) {
+                    buffer = s.substring(start);
                     break;
                 }
-                console.log("DUMP: " + buffer.substring(start, index));
+                console.log("DUMP: " + buffer + s.substring(start, index));
+                buffer = "";
                 start = index + NEWLINE.length;
-                // TODO: Better buffer size limiting.
-                if (start > 1000) {
-                    buffer = buffer.substring(start);
-                    start = 0;
-                }
             }
         }
         return dump;

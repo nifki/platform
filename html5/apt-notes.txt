@@ -8,4 +8,3 @@ Discuss:
     // TODO: We should rethink this API with cryptographic
     // randomness in mind. (JS numbers don't have enough bits).
 
-Check draw order.
