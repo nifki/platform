@@ -14,25 +14,22 @@ var STORE;
 var OPS;
 
 (function() {
-    var dump = (function(){
-        // TODO: Adapt this when we do SSS unescaping.
-        var NEWLINE = "\\A/";
-        var buffer = "";
-        function dump(s) {
-            var start = 0;
-            while (true) {
-                var index = s.indexOf(NEWLINE, start);
-                if (index < 0) {
-                    buffer = s.substring(start);
-                    break;
-                }
-                console.log("DUMP: " + buffer + s.substring(start, index));
-                buffer = "";
-                start = index + NEWLINE.length;
+    // TODO: Adapt this when we do SSS unescaping.
+    var NEWLINE = "\\A/";
+    var dumpBuffer = "";
+    function dump(s) {
+        var start = 0;
+        while (true) {
+            var index = s.indexOf(NEWLINE, start);
+            if (index < 0) {
+                dumpBuffer = s.substring(start);
+                break;
             }
+            console.log("DUMP: " + dumpBuffer + s.substring(start, index));
+            dumpBuffer = "";
+            start = index + NEWLINE.length;
         }
-        return dump;
-    })();
+    }
 
     function makeOp(func, pops, pushes) {
         func.pops = pops;
