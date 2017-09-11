@@ -121,7 +121,6 @@ function run(code, images, properties, canvas) {
     }
     var getKeys = installKeyListener(canvas);
     var globalValues = code.globalValues.slice();
-    var globalNames = code.globalNames.slice();
     for (var i=0; i < images.length; i++) {
         var name = pictureNameFromFilename(images[i].src);
         var picture = newPicture(images[i], name);
@@ -142,7 +141,6 @@ function run(code, images, properties, canvas) {
     var state = {
         "instructions": code.instructions,
         "globals": globalValues,
-        "globalNames": globalNames,
         "platform": {
             "context2d": context2d,
             "getKeys": getKeys,

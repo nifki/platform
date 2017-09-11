@@ -83,13 +83,11 @@ var assemble = function() {
         }
 
         var globalMappings = {};
-        var globalNames = [];
         var globalValues = [];
 
         function getGlobalIndex(name) {
             if (!(name in globalMappings)) {
                 globalMappings[name] = globalValues.length;
-                globalNames.push(name);
                 globalValues.push(null);
             }
             return globalMappings[name];
@@ -362,7 +360,6 @@ var assemble = function() {
         return { // TODO: Add more.
             "instructions": instructions,
             "globalMappings": globalMappings,
-            "globalNames": globalNames,
             "globalValues": globalValues,
             "main": main
         };
