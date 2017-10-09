@@ -180,10 +180,12 @@ function loadImagesThen(imageFilenames, callback) {
     }
 
     for (var i=0; i < imageFilenames.length; i++) {
-        var name = imageFilenames[i];
+        var path = imageFilenames[i];
+        var parts = path.split('/');
+        var name = parts[parts.length - 1];
         var image = new Image();
         image.onload = count;
-        image.src = name;
+        image.src = path;
         images[name] = image;
     }
 }
@@ -191,14 +193,14 @@ function loadImagesThen(imageFilenames, callback) {
 function onPageLoad() {
     loadImagesThen(
         [
-            "Rocks_rockPNG",
-            "Rocks_blankPNG",
-            "Rocks_leftPNG",
-            "Rocks_diamondPNG",
-            "Rocks_earthPNG",
-            "Rocks_manPNG",
-            "Rocks_rightPNG",
-            "Rocks_wallPNG"
+            "images/Rocks_rockPNG",
+            "images/Rocks_blankPNG",
+            "images/Rocks_leftPNG",
+            "images/Rocks_diamondPNG",
+            "images/Rocks_earthPNG",
+            "images/Rocks_manPNG",
+            "images/Rocks_rightPNG",
+            "images/Rocks_wallPNG"
         ],
         function(images) {
             run(
