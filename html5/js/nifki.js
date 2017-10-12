@@ -180,34 +180,28 @@ function loadImagesThen(imageFilenames, callback) {
     }
 
     for (var i=0; i < imageFilenames.length; i++) {
-        var path = imageFilenames[i];
-        var parts = path.split('/');
-        var name = parts[parts.length - 1];
+        var name = imageFilenames[i];
         var image = new Image();
         image.onload = count;
-        image.src = path;
+        image.src = name;
         images[name] = image;
     }
 }
 
 function onPageLoad() {
+    var canvas = document.getElementById("game");
+    var width = +canvas.getAttribute("data-width");
+    var height = +canvas.getAttribute("data-height");
+    var msPerFrame = +canvas.getAttribute("data-msPerFrame");
+    var resources = canvas.getAttribute("data-resources").split(",");
     loadImagesThen(
-        [
-            "images/Rocks_rockPNG",
-            "images/Rocks_blankPNG",
-            "images/Rocks_leftPNG",
-            "images/Rocks_diamondPNG",
-            "images/Rocks_earthPNG",
-            "images/Rocks_manPNG",
-            "images/Rocks_rightPNG",
-            "images/Rocks_wallPNG"
-        ],
+        resources,
         function(images) {
             run(
                 assemble(TEST_CODE),
                 images,
-                {"w": 384, "h": 384, "msPerFrame": 40},
-                document.getElementById("game")
+                {"w": width, "h": height, "msPerFrame": msPerFrame},
+                canvas
             );
         }
     );

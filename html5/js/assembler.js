@@ -34,17 +34,17 @@ var assemble = function() {
          * Note: Javascript RegExps have state; we need a fresh one.
          */
         var wordRegExp = new RegExp(
-            "(\\n|#[^\\n]*\\n?)" + "|" +
-            "\"([^\"]*)(\"?)" + "|" +
-            "([0-9][^\\t\\n\\r ]*)" + "|" +
+            "(\\n|#[^\\n]*\\n?)" + "|" + // Newline or comment.
+            "\"([^\"]*)(\"?)" + "|" + // String literal.
+            "([0-9][^\\t\\n\\r ]*)" + "|" + // Number literal.
             (
                 "([^\\(\\t\\n\\r ]+)" +
                 "\\(" +
                 "([^\\)\\t\\n\\r ]*)" +
                 "\\)" +
                 "(?![^\\t\\n\\r ])"
-            ) + "|" +
-            "[^\\t\\n\\r ]+",
+            ) + "|" + // Opcode(arg).
+            "[^\\t\\n\\r ]+", // Opcode.
             "g"
         );
         var wordMatch; // Next match object from `wordRegExp`.
