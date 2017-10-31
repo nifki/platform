@@ -223,23 +223,19 @@ function loadImagesThen(imageFilenames, callback) {
 }
 
 function onPageLoad() {
+    var canvas = document.getElementById("game");
+    var width = +canvas.getAttribute("data-width");
+    var height = +canvas.getAttribute("data-height");
+    var msPerFrame = +canvas.getAttribute("data-msPerFrame");
+    var resources = canvas.getAttribute("data-resources").split(",");
     loadImagesThen(
-        [
-            "Rocks_rockPNG",
-            "Rocks_blankPNG",
-            "Rocks_leftPNG",
-            "Rocks_diamondPNG",
-            "Rocks_earthPNG",
-            "Rocks_manPNG",
-            "Rocks_rightPNG",
-            "Rocks_wallPNG"
-        ],
+        resources,
         function(images) {
             run(
                 assemble(TEST_CODE),
                 images,
-                {"w": 384, "h": 384, "msPerFrame": 40},
-                document.getElementById("game")
+                {"w": width, "h": height, "msPerFrame": msPerFrame},
+                canvas
             );
         }
     );
