@@ -320,7 +320,7 @@ var OPS;
             function MUL(state) {
                 function repeatString(string, number) {
                     var count = number.v | 0;
-                    if (number.v != count) {
+                    if (number.v !== count) {
                         throw valueToString(number) + " is not an integer";
                     }
                     if (count < 0) {
@@ -715,7 +715,7 @@ var OPS;
                         );
                     }
                     var index = k.v | 0;
-                    if (index != k.v) {
+                    if (index !== k.v) {
                         throw (
                             "String subscript must be an integer, not " +
                             valueToString(k)
