@@ -39,14 +39,15 @@ var OPS;
 
     BREAK = function BREAK(numLoops) {
         return makeOp(
-            function BREAK(state) {
+            function BREAK(state, args) {
                 var i = 1;
                 while (i < numLoops) {
-                    state.frame.loop = state.frame.loop.enclosing;
+                    args.loop = args.loop.enclosing;
                     i++;
                 }
-                state.frame.pc = state.frame.loop.breakPC;
-                state.frame.loop = state.frame.loop.enclosing;
+                args.pc = args.loop.breakPC;
+                args.loop = args.loop.enclosing;
+                args.numResults = 0;
             },
             0,
             0
@@ -59,8 +60,9 @@ var OPS;
      */
     CONSTANT = function CONSTANT(value) {
         return makeOp(
-            function CONSTANT(state) {
-                state.frame.stack.push(value);
+            function CONSTANT(state, args) {
+                args.r0 = value;
+                args.numResults = 1;
             },
             0,
             1
@@ -70,31 +72,33 @@ var OPS;
     /** The beginning of a "FOR ... NEXT ... ELSE" structure. */
     FOR = function FOR(loopPC, elsePC, breakPC) {
         return makeOp(
-            function FOR(state) {
-                var t = state.frame.stack.pop();
-                function NEXT(state) {
-                    var loopState = state.frame.loop;
+            function FOR(state, args) {
+                var t = args.a0;
+                function NEXT(state, args) {
+                    var loopState = args.loop;
                     if (loopState.it === null) {
                         // Exit the loop.
-                        state.frame.loop = loopState.enclosing;
-                        state.frame.pc = elsePC;
+                        args.loop = loopState.enclosing;
+                        args.pc = elsePC;
+                        args.numResults = 0;
                     } else {
                         // Execute the body of the loop.
-                        state.frame.stack.push(loopState.it.key);
-                        state.frame.stack.push(loopState.it.value);
+                        args.r0 = loopState.it.key;
+                        args.r1 = loopState.it.value;
+                        args.numResults = 2;
+                        args.pc = loopPC;
                         loopState.it = loopState.it.next();
-                        state.frame.pc = loopPC;
                     }
                 }
-                state.frame.loop = {
+                args.loop = {
                     "loopPC": loopPC,
                     "elsePC": elsePC,
                     "breakPC": breakPC,
-                    "enclosing": state.frame.loop,
+                    "enclosing": args.loop,
                     "next": NEXT,
                     "it": valueIterator(t)
                 };
-                state.frame.loop.next(state);
+                args.loop.next(state, args);
             },
             1,
             2
@@ -103,8 +107,9 @@ var OPS;
 
     GOTO = function GOTO(targetPC) {
         return makeOp(
-            function GOTO(state) {
-                state.frame.pc = targetPC;
+            function GOTO(state, args) {
+                args.pc = targetPC;
+                args.numResults = 0;
             },
             0,
             0
@@ -113,8 +118,8 @@ var OPS;
 
     IF = function IF(targetPC) {
         return makeOp(
-            function IF(state) {
-                var cond = state.frame.stack.pop();
+            function IF(state, args) {
+                var cond = args.a0;
                 if (cond.type !== "boolean") {
                     throw (
                         "IF requires a boolean, not '" + valueToString(cond) +
@@ -122,8 +127,9 @@ var OPS;
                     );
                 }
                 if (cond.v === false) {
-                    state.frame.pc = targetPC;
+                    args.pc = targetPC;
                 }
+                args.numResults = 0;
             },
             1,
             0
@@ -132,8 +138,8 @@ var OPS;
 
     LLOAD = function LLOAD(index, name) {
         return makeOp(
-            function LLOAD(state) {
-                var value = state.frame.locals[index];
+            function LLOAD(state, args) {
+                var value = args.locals[index];
                 // `value === null` is just paranoia. It might be impossible.
                 if (typeof value === "undefined" || value === null) {
                     throw (
@@ -141,7 +147,8 @@ var OPS;
                         ") not defined"  // The Java version omits "(<name>)"
                     );
                 }
-                state.frame.stack.push(value);
+                args.r0 = value;
+                args.numResults = 1;
             },
             0,
             1
@@ -150,12 +157,13 @@ var OPS;
 
     LOAD = function LOAD(index, name) {
         return makeOp(
-            function LOAD(state) {
+            function LOAD(state, args) {
                 var value = state.globals[index];
                 if (typeof value === "undefined" || value === null) {
                     throw "Global variable " + name + " not defined";
                 }
-                state.frame.stack.push(value);
+                args.r0 = value;
+                args.numResults = 1;
             },
             0,
             1
@@ -165,18 +173,20 @@ var OPS;
     /** The beginning of a "LOOP ... WHILE ... NEXT ... ELSE" structure. */
     LOOP = function LOOP(loopPC, elsePC, breakPC) {
         return makeOp(
-            function LOOP(state) {
-                state.frame.loop = {
+            function LOOP(state, args) {
+                args.loop = {
                     "loopPC": loopPC,
                     "elsePC": elsePC,
                     "breakPC": breakPC,
-                    "enclosing": state.frame.loop,
-                    "next": function NEXT(state) {
-                        state.frame.pc = loopPC;
+                    "enclosing": args.loop,
+                    "next": function NEXT(state, args) {
+                        args.pc = loopPC;
+                        args.numResults = 0;
                     }
                 };
                 // FIXME: Branch to `loopPC`?
-                // state.frame.loop.next(state);
+                // args.loop.next(state);
+                args.numResults = 0;
             },
             0,
             0
@@ -185,8 +195,9 @@ var OPS;
 
     LSTORE = function LSTORE(index, name) {
         return makeOp(
-            function LSTORE(state) {
-                state.frame.locals[index] = state.frame.stack.pop();
+            function LSTORE(state, args) {
+                args.locals[index] = args.a0;
+                args.numResults = 0;
             },
             1,
             0
@@ -195,9 +206,9 @@ var OPS;
 
     SET = function SET(name) {
         return makeOp(
-            function SET(state) {
-                var v = state.frame.stack.pop();
-                var o = state.frame.stack.pop();
+            function SET(state, args) {
+                var v = args.a0;
+                var o = args.a1;
                 if (o.type !== "object") {
                     throw (
                         "Cannot apply SET to " + valueToString(o) +
@@ -217,6 +228,7 @@ var OPS;
                     state.visibleSprites[o.objNum] = o;
                 }
                 o.v[name] = v;
+                args.numResults = 0;
             },
             2,
             0
@@ -225,8 +237,9 @@ var OPS;
 
     STORE = function STORE(index, name) {
         return makeOp(
-            function STORE(state) {
-                state.globals[index] = state.frame.stack.pop();
+            function STORE(state, args) {
+                state.globals[index] = args.a0;
+                args.numResults = 0;
             },
             1,
             0
@@ -235,13 +248,13 @@ var OPS;
 
     OPS = {
         "+": makeOp(
-            function ADD(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function ADD(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type === "number" && y.type === "number") {
-                    state.frame.stack.push(newNumber(x.v + y.v));
+                    args.r0 = newNumber(x.v + y.v);
                 } else if (x.type === "string" && y.type === "string") {
-                    state.frame.stack.push(newString(x.v + y.v));
+                    args.r0 = newString(x.v + y.v);
                 } else if (x.type === "table" && y.type === "table") {
                     var result = x.v;
                     var it = tableIterator(y.v);
@@ -249,23 +262,24 @@ var OPS;
                         result = tablePut(result, it.key, it.value);
                         it = it.next();
                     }
-                    state.frame.stack.push(newTable(result));
+                    args.r0 = newTable(result);
                 } else {
                     throw (
                         "Cannot add " + valueToString(x) + " to " +
                         valueToString(y)
                     );
                 }
+                args.numResults = 1;
             },
             2,
             1
         ),
         "-": makeOp(
-            function SUB(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function SUB(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type === "number" && y.type === "number") {
-                    state.frame.stack.push(newNumber(x.v - y.v));
+                    args.r0 = newNumber(x.v - y.v);
                 } else if (x.type === "number" && y.type === "string") {
                     var yStr = y.v;
                     var xInt = x.v | 0;
@@ -280,7 +294,7 @@ var OPS;
                         );
                     }
                     var result = yStr.substring(xInt);
-                    state.frame.stack.push(newString(result));
+                    args.r0 = newString(result);
                 } else if (x.type === "string" && y.type === "number") {
                     var xStr = x.v;
                     var yInt = y.v | 0;
@@ -295,7 +309,7 @@ var OPS;
                         );
                     }
                     var result = xStr.substring(0, xStr.length - yInt);
-                    state.frame.stack.push(newString(result));
+                    args.r0 = newString(result);
                 } else if (x.type === "table" && y.type === "table") {
                     var result = EMPTY_TABLE;
                     var it = tableIterator(x.v);
@@ -305,19 +319,20 @@ var OPS;
                         }
                         it = it.next();
                     }
-                    state.frame.stack.push(newTable(result));
+                    args.r0 = newTable(result);
                 } else {
                     throw (
                         "Cannot subtract " + valueToString(y) + " from " +
                         valueToString(x)
                     );
                 }
+                args.numResults = 1;
             },
             2,
             1
         ),
         "*": makeOp(
-            function MUL(state) {
+            function MUL(state, args) {
                 function repeatString(string, number) {
                     var count = number.v | 0;
                     if (number.v !== count) {
@@ -338,30 +353,31 @@ var OPS;
                     }
                     return newString(result);
                 }
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type === "number" && y.type === "number") {
-                    state.frame.stack.push(newNumber(x.v * y.v));
+                    args.r0 = newNumber(x.v * y.v);
                 } else if (x.type === "number" && y.type === "string") {
-                    state.frame.stack.push(repeatString(y, x));
+                    args.r0 = repeatString(y, x);
                 } else if (x.type === "string" && y.type === "number") {
-                    state.frame.stack.push(repeatString(x, y));
+                    args.r0 = repeatString(x, y);
                 } else {
                     throw (
                         "Cannot multiply " + valueToString(x) + " by " +
                         valueToString(y)
                     );
                 }
+                args.numResults = 1;
             },
             2,
             1
         ),
         "/": makeOp(
-            function DIV(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function DIV(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type === "number" && y.type === "number") {
-                    state.frame.stack.push(newNumber(x.v / y.v));
+                    args.r0 = newNumber(x.v / y.v);
                 } else if (x.type === "number" && y.type === "string") {
                     var xInt = x.v | 0;
                     if (xInt !== x.v) {
@@ -375,9 +391,7 @@ var OPS;
                             ": index out of range"
                         );
                     }
-                    state.frame.stack.push(
-                        newString(yStr.substring(0, xInt))
-                    );
+                    args.r0 = newString(yStr.substring(0, xInt));
                 } else if (x.type === "string" && y.type === "number") {
                     var xStr = x.v;
                     var yInt = y.v | 0;
@@ -391,9 +405,7 @@ var OPS;
                             ": index out of range"
                         );
                     }
-                    state.frame.stack.push(
-                        newString(xStr.substring(xStr.length - yInt))
-                    );
+                    args.r0 = newString(xStr.substring(xStr.length - yInt));
                 } else if (x.type === "table" && y.type === "table") {
                     var result = EMPTY_TABLE;
                     var it = tableIterator(x.v);
@@ -403,21 +415,22 @@ var OPS;
                         }
                         it = it.next();
                     }
-                    state.frame.stack.push(newTable(result));
+                    args.r0 = newTable(result);
                 } else {
                     throw (
                         "Cannot divide " + valueToString(x) + " by " +
                         valueToString(y)
                     );
                 }
+                args.numResults = 1;
             },
             2,
             1
         ),
         "%": makeOp(
-            function MOD(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function MOD(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type !== "number" || y.type !== "number") {
                     throw (
                         "Cannot apply % to " + valueToString(x) + " and " +
@@ -425,124 +438,132 @@ var OPS;
                     );
                 }
                 var result = x.v - y.v * Math.floor(x.v / y.v);
-                state.frame.stack.push(newNumber(result));
+                args.r0 = newNumber(result);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "**": makeOp(
-            function POW(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function POW(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type !== "number" || y.type !== "number") {
                     throw (
                         "Cannot apply ** to " + valueToString(x) + " and " +
                         valueToString(y) + "; two numbers are required"
                     );
                 }
-                state.frame.stack.push(newNumber(Math.pow(x.v, y.v)));
+                args.r0 = newNumber(Math.pow(x.v, y.v));
+                args.numResults = 1;
             },
             2,
             1
         ),
         "==": makeOp(
-            function EQ(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function EQ(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 try {
                     var cmp = compareValues(x, y);
-                    state.frame.stack.push(
-                        cmp === 0 ? VALUE_TRUE : VALUE_FALSE);
+                    args.r0 = (cmp === 0 ? VALUE_TRUE : VALUE_FALSE);
                 } catch(err) {
-                    state.frame.stack.push(VALUE_FALSE);
+                    args.r0 = VALUE_FALSE;
                 }
+                args.numResults = 1;
             },
             2,
             1
         ),
         "!=": makeOp(
-            function NE(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function NE(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 try {
                     var cmp = compareValues(x, y);
-                    state.frame.stack.push(
-                        cmp !== 0 ? VALUE_TRUE : VALUE_FALSE);
+                    args.r0 = (cmp !== 0 ? VALUE_TRUE : VALUE_FALSE);
                 } catch(err) {
-                    state.frame.stack.push(VALUE_TRUE);
+                    args.r1 = VALUE_TRUE;
                 }
+                args.numResults = 1;
             },
             2,
             1
         ),
         "<>": makeOp(
-            function LG(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function LG(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp !== 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (cmp !== 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "<": makeOp(
-            function LT(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function LT(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp < 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (cmp < 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "<=": makeOp(
-            function LTE(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function LTE(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp <= 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (cmp <= 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         ">": makeOp(
-            function GT(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function GT(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp > 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (cmp > 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         ">=": makeOp(
-            function GTE(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function GTE(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp >= 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (cmp >= 0 ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "ABS": makeOp(
-            function ABS(state) {
-                var x = state.frame.stack.pop();
+            function ABS(state, args) {
+                var x = args.a0;
                 if (x.type !== "number") {
                     throw (
                         "Cannot apply ABS to " + valueToString(x) +
                         "; a number is required"
                     );
                 }
-                state.frame.stack.push(newNumber(Math.abs(x.v)));
+                args.r0 = newNumber(Math.abs(x.v));
+                args.numResults = 1;
             },
             1,
             1
         ),
         "AND": makeOp(
-            function AND(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function AND(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type !== "boolean" || y.type !== "boolean") {
                     throw (
                         "Cannot apply AND to " + valueToString(x) + " and " +
@@ -550,55 +571,66 @@ var OPS;
                     );
                 }
                 var result = x.v && y.v;
-                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (result ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "CALL": makeOp(
-            function CALL(state) {
-                var args = state.frame.stack.pop();
-                var f = state.frame.stack.pop();
-                if (args.type !== "table" || f.type !== "function") {
+            function CALL(state, args) {
+                var funcArgs = args.a0;
+                var f = args.a1;
+                if (funcArgs.type !== "table" || f.type !== "function") {
                     throw (
                         "Can't call " + valueToString(f) +
-                        " as a function (passing " + valueToString(args) + ")"
+                        " as a function (passing " + valueToString(funcArgs) +
+                        ")"
                     );
                 }
+                state.frame.pc = args.pc;
+                state.frame.loop = args.loop;
+                if (state.frame.locals !== args.locals) throw "Assertion failure";
                 state.frame = newStackFrame(f, state.frame);
-                state.frame.stack.push(args);
+                args.pc = state.frame.pc;
+                args.locals = state.frame.locals;
+                args.loop = null;
+                args.r0 = funcArgs;
+                args.numResults = 1;
             },
             2,
             1
         ),
         "CEIL": makeOp(
-            function CEIL(state) {
-                var x = state.frame.stack.pop();
+            function CEIL(state, args) {
+                var x = args.a0;
                 if (x.type !== "number") {
                     throw (
                         "Cannot apply CEIL to " + valueToString(x) +
                         "; a number is required"
                     );
                 }
-                state.frame.stack.push(newNumber(-Math.floor(-x.v)));
+                args.r0 = newNumber(-Math.floor(-x.v));
+                args.numResults = 1;
             },
             1,
             1
         ),
         "CLS": makeOp(
-            function CLS(state) {
+            function CLS(state, args) {
                 for (var spriteNum in state.visibleSprites) {
                     var sprite = state.visibleSprites[spriteNum];
                     sprite.v.IsVisible = VALUE_FALSE;
                 }
+                args.numResults = 0;
             },
             0,
             0
         ),
         "CONTAINS": makeOp(
-            function CONTAINS(state) {
-                var k = state.frame.stack.pop();
-                var t = state.frame.stack.pop();
+            function CONTAINS(state, args) {
+                var k = args.a0;
+                var t = args.a1;
                 var result;
                 if (t.type === "string") {
                     if (k.type === "number") {
@@ -616,15 +648,16 @@ var OPS;
                 } else {
                     throw "Type error: cannot subscript " + valueToString(t);
                 }
-                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (result ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "DGET": makeOp(
-            function DGET(state) {
-                var k = state.frame.stack.pop();
-                var t = state.frame.stack.pop();
+            function DGET(state, args) {
+                var k = args.a0;
+                var t = args.a1;
                 if (t.type === "table") {
                     var v = tableGet(t.v, k);
                     if (v === null) {
@@ -633,9 +666,10 @@ var OPS;
                             "] is not defined"
                         );
                     }
-                    state.frame.stack.push(t);
-                    state.frame.stack.push(k);
-                    state.frame.stack.push(v);
+                    args.r0 = t;
+                    args.r1 = k;
+                    args.r2 = v;
+                    args.numResults = 3;
                 } else {
                     // This instruction is only used to implement assignment
                     // to a value in a table.
@@ -649,39 +683,42 @@ var OPS;
             3
         ),
         "DROP": makeOp(
-            function DROP(state) {
-                state.frame.stack.pop();
+            function DROP(state, args) {
+                // Ignores args.a0
+                args.numResults = 0;
             },
             1,
             0
         ),
         "DROPTABLE": makeOp(
-            function DROPTABLE(state) {
-                var value = state.frame.stack.pop();
+            function DROPTABLE(state, args) {
+                var value = args.a0;
                 if (value.type !== "table" || tableSize(value.v) !== 0) {
                     throw (
                         "A function can be called as a subroutine only if " +
                         "it returns [] (the empty table)"
                     );
                 }
+                args.numResults = 0;
             },
             1,
             0
         ),
         "DUMP": makeOp(
-            function DUMP(state) {
-                var value = state.frame.stack.pop();
+            function DUMP(state, args) {
+                var value = args.a0;
                 if (value.type === "string") {
                     dump(value.v);
                 } else {
                     dump(valueToLongString(value));
                 }
+                args.numResults = 0;
             },
             1,
             0
         ),
         "END": makeOp(
-            function END(state) {
+            function END(state, args) {
                 throw "END";
             },
             0,
@@ -689,23 +726,24 @@ var OPS;
         ),
         "FALSE": CONSTANT(VALUE_FALSE),
         "FLOOR": makeOp(
-            function FLOOR(state) {
-                var x = state.frame.stack.pop();
+            function FLOOR(state, args) {
+                var x = args.a0;
                 if (x.type !== "number") {
                     throw (
                         "Cannot apply FLOOR to " + valueToString(x) +
                         "; a number is required"
                     );
                 }
-                state.frame.stack.push(newNumber(Math.floor(x.v)));
+                args.r0 = newNumber(Math.floor(x.v));
+                args.numResults = 1;
             },
             1,
             1
         ),
         "GET": makeOp(
-            function GET(state) {
-                var k = state.frame.stack.pop();
-                var t = state.frame.stack.pop();
+            function GET(state, args) {
+                var k = args.a0;
+                var t = args.a1;
                 var result;
                 if (t.type === "string") {
                     if (k.type !== "number") {
@@ -748,81 +786,87 @@ var OPS;
                         " is not defined"
                     );
                 }
-                state.frame.stack.push(result);
+                args.r0 = result;
+                args.numResults = 1;
             },
             2,
             1
         ),
         "KEYS": makeOp(
-            function KEYS(state) {
+            function KEYS(state, args) {
                 var result = state.platform.getKeys();
-                state.frame.stack.push(newTable(result));
+                args.r0 = newTable(result);
+                args.numResults = 1;
             },
             0,
             1
         ),
         "LEN": makeOp(
-            function LEN(state) {
-                var x = state.frame.stack.pop();
+            function LEN(state, args) {
+                var x = args.a0;
                 if (x.type === "string") {
-                    state.frame.stack.push(newNumber(x.v.length));
+                    args.r0 = newNumber(x.v.length);
                 } else if (x.type === "table") {
-                    state.frame.stack.push(newNumber(tableSize(x.v)));
+                    args.r0 = newNumber(tableSize(x.v));
                 } else {
                     throw "Cannot apply LEN to " + valueToString(x);
                 }
+                args.numResults = 1;
             },
             1,
             1
         ),
         "MAX": makeOp(
-            function MAX(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function MAX(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp > 0 ? x : y);
+                args.r0 = (cmp > 0 ? x : y);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "MIN": makeOp(
-            function MIN(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function MIN(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 var cmp = compareValues(x, y);
-                state.frame.stack.push(cmp < 0 ? x : y);
+                args.r0 = (cmp < 0 ? x : y);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "NEG": makeOp(
-            function NEG(state) {
-                var x = state.frame.stack.pop();
+            function NEG(state, args) {
+                var x = args.a0;
                 if (x.type === "number") {
-                    state.frame.stack.push(newNumber(-x.v));
+                    args.r0 = newNumber(-x.v);
                 } else if (x.type === "string") {
                     // TODO: Proper unicode.
-                    state.frame.stack.push(
-                        newString(x.v.split("").reverse().join("")));
+                    args.r0 = newString(x.v.split("").reverse().join(""));
                 } else {
                     throw "Cannot negate " + valueToString(x);
                 }
+                args.numResults = 1;
             },
             1,
             1
         ),
         "NEXT": makeOp(
-            function NEXT(state) {
-                state.frame.loop.next(state);
+            function NEXT(state, args) {
+                args.loop.next(state, args);
             },
             0,
             0
         ),
         "NOT": makeOp(
-            function NOT(state) {
-                var x = state.frame.stack.pop();
+            function NOT(state, args) {
+                var x = args.a0;
                 if (x.type === "boolean") {
-                    state.frame.stack.push(x.v ? VALUE_FALSE : VALUE_TRUE);
+                    args.r0 = (x.v ? VALUE_FALSE : VALUE_TRUE);
+                    args.numResults = 1;
                 } else {
                     throw (
                         "Cannot apply NOT to " + valueToString(x) +
@@ -834,9 +878,9 @@ var OPS;
             1
         ),
         "OR": makeOp(
-            function OR(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function OR(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type !== "boolean" || y.type !== "boolean") {
                     throw (
                         "Cannot apply OR to " + valueToString(x) + " and " +
@@ -844,17 +888,17 @@ var OPS;
                     );
                 }
                 var result = x.v || y.v;
-                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (result ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1
         ),
         "PUT": makeOp(
-            function PUT(state) {
-                var stack = state.frame.stack;
-                var v = stack.pop();
-                var k = stack.pop();
-                var t = stack.pop();
+            function PUT(state, args) {
+                var v = args.a0;
+                var k = args.a1;
+                var t = args.a2;
                 if (TYPE_INDEX[k.type] > 5) {
                     throw (
                         "'" + valueToString(k) +
@@ -865,46 +909,53 @@ var OPS;
                     throw "'" + valueToString(t) + "' is not a table";
                 }
                 var result = tablePut(t.v, k, v);
-                stack.push(newTable(result));
+                args.r0 = newTable(result);
+                args.numResults = 1;
             },
             3,
             1
         ),
         "RANDOM": makeOp(
-            function RANDOM(state) {
+            function RANDOM(state, args) {
                 // TODO: We should rethink this API with cryptographic
                 // randomness in mind. (JS numbers don't have enough bits).
-                state.frame.stack.push(newNumber(Math.random()));
+                args.r0 = newNumber(Math.random());
+                args.numResults = 1;
             },
             0,
             1
         ),
         "RETURN": makeOp(
-            function RETURN(state) {
-                var result = state.frame.stack.pop();
+            function RETURN(state, args) {
+                var result = args.a0;
                 state.frame = state.frame.caller;
-                state.frame.stack.push(result);
+                args.pc = state.frame.pc;
+                args.locals = state.frame.locals;
+                args.loop = state.frame.loop;
+                args.r0 = result;
+                args.numResults = 1;
             },
             1,
             0
         ),
         "ROUND": makeOp(
-            function ROUND(state) {
-                var x = state.frame.stack.pop();
+            function ROUND(state, args) {
+                var x = args.a0;
                 if (x.type !== "number") {
                     throw (
                         "Cannot apply ROUND to " + valueToString(x) +
                         "; a number is required"
                     );
                 }
-                state.frame.stack.push(newNumber(Math.round(x.v)));
+                args.r0 = newNumber(Math.round(x.v));
+                args.numResults = 1;
             },
             1,
             1
         ),
         "SPRITE": makeOp(
-            function SPRITE(state) {
-                var picture = state.frame.stack.pop();
+            function SPRITE(state, args) {
+                var picture = args.a0;
                 if (picture.type !== "picture") {
                     throw (
                         "Cannot apply SPRITE " + valueToString(picture) +
@@ -923,14 +974,15 @@ var OPS;
                         "IsVisible": VALUE_FALSE
                     }
                 );
-                state.frame.stack.push(sprite);
+                args.r0 = sprite;
+                args.numResults = 1;
             },
             1,
             1
         ),
         "SQRT": makeOp(
-            function SQRT(state) {
-                var x = state.frame.stack.pop();
+            function SQRT(state, args) {
+                var x = args.a0;
                 if (x.type === "number") {
                     if (x.v < 0) {
                         throw (
@@ -938,7 +990,8 @@ var OPS;
                             valueToString(x)
                         );
                     }
-                    state.frame.stack.push(newNumber(Math.sqrt(x.v)));
+                    args.r0 = newNumber(Math.sqrt(x.v));
+                    args.numResults = 1;
                 } else {
                     throw "Cannot square root " + valueToString(x);
                 }
@@ -949,15 +1002,15 @@ var OPS;
         "TABLE": CONSTANT(newTable(EMPTY_TABLE)),
         "TRUE": CONSTANT(VALUE_TRUE),
         "WAIT": makeOp(
-            function WAIT(state) {
+            function WAIT(state, args) {
                 throw "WAIT";
             },
             0,
             0
         ),
         "WHILE": makeOp(
-            function WHILE(state) {
-                var cond = state.frame.stack.pop();
+            function WHILE(state, args) {
+                var cond = args.a0;
                 if (cond.type !== "boolean") {
                     throw (
                         "Cannot execute WHILE " + valueToString(cond) +
@@ -965,24 +1018,26 @@ var OPS;
                     );
                 }
                 if (cond.v === false) {
-                    state.frame.pc = state.frame.loop.elsePC;
-                    state.frame.loop = state.frame.loop.enclosing;
+                    args.pc = args.loop.elsePC;
+                    args.loop = args.loop.enclosing;
                 }
+                args.numResults = 0;
             },
             1,
             0
         ),
         "WINDOW": makeOp(
-            function WINDOW(state) {
-                state.frame.stack.push(state.window);
+            function WINDOW(state, args) {
+                args.r0 = state.window;
+                args.numResults = 1;
             },
             0,
             1
         ),
         "XOR": makeOp(
-            function XOR(state) {
-                var y = state.frame.stack.pop();
-                var x = state.frame.stack.pop();
+            function XOR(state, args) {
+                var y = args.a0;
+                var x = args.a1;
                 if (x.type !== "boolean" || y.type !== "boolean") {
                     throw (
                         "Cannot apply XOR to " + valueToString(x) + " and " +
@@ -990,7 +1045,8 @@ var OPS;
                     );
                 }
                 var result = x.v ^ y.v;
-                state.frame.stack.push(result ? VALUE_TRUE : VALUE_FALSE);
+                args.r0 = (result ? VALUE_TRUE : VALUE_FALSE);
+                args.numResults = 1;
             },
             2,
             1

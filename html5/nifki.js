@@ -89,10 +89,40 @@ function removeHiddenSprites(visibleSprites) {
 
 function doFrame(state) {
     var instructions = state.instructions;
-    // Run the interpreter here.
+    var args = {
+        "a0": null,
+        "a1": null,
+        "a2": null,
+        "locals": null,
+        "loop": null,
+        "numResults": 0,
+        "pc": 0,
+        "r0": null,
+        "r1": null,
+        "r2": null
+    };
+    // Run the interpreter.
     try {
         while (true) {
-            instructions[state.frame.pc++](state);
+            var instr = instructions[state.frame.pc];
+            state.frame.pc++;
+            args.pc = state.frame.pc;
+            args.loop = state.frame.loop;
+            args.locals = state.frame.locals;
+            var argStack = state.frame.stack;
+            if (instr.pops > 0) args.a0 = argStack.pop();
+            if (instr.pops > 1) args.a1 = argStack.pop();
+            if (instr.pops > 2) args.a2 = argStack.pop();
+            args.numResults = undefined;
+            instr(state, args);
+            if (typeof args.numResults === "undefined") throw "Assertion failure";
+            var resultStack = state.frame.stack;
+            if (args.numResults > 0) resultStack.push(args.r0);
+            if (args.numResults > 1) resultStack.push(args.r1);
+            if (args.numResults > 2) resultStack.push(args.r2);
+            state.frame.pc = args.pc;
+            state.frame.loop = args.loop;
+            state.frame.locals = args.locals;
         }
     } catch (e) {
         if (e === "WAIT") {
