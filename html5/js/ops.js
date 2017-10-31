@@ -22,7 +22,7 @@ var OPS;
         while (true) {
             var index = s.indexOf(NEWLINE, start);
             if (index < 0) {
-                dumpBuffer = s.substring(start);
+                dumpBuffer += s.substring(start);
                 break;
             }
             console.log("DUMP: " + dumpBuffer + s.substring(start, index));
