@@ -8,20 +8,23 @@
  * @param height - the desired vertical resolution in pixels.
  */
 function initCanvas(canvas, width, height) {
-    if (!canvas.getContext) return null;
-    var ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    canvas.width = width;
-    canvas.height = height;
-    if (typeof ctx.imageSmoothingEnabled !== "undefined") {
-        ctx.imageSmoothingEnabled = false;
-    } else {
-        ctx.mozImageSmoothingEnabled = false;
-        ctx.webkitImageSmoothingEnabled = false;
-        ctx.msImageSmoothingEnabled = false;
+    if (canvas.getContext) {
+        var ctx = canvas.getContext("2d");
+        if (ctx) {
+            canvas.width = width;
+            canvas.height = height;
+            if (typeof ctx.imageSmoothingEnabled !== "undefined") {
+                ctx.imageSmoothingEnabled = false;
+            } else {
+                ctx.mozImageSmoothingEnabled = false;
+                ctx.webkitImageSmoothingEnabled = false;
+                ctx.msImageSmoothingEnabled = false;
+            }
+            ctx.scale(width, height);
+            return ctx;
+        }
     }
-    ctx.scale(width, height);
-    return ctx;
+    return null;
 }
 
 function rgb(r, g, b) {
@@ -119,6 +122,7 @@ function doFrame(state) {
 function run(code, images, properties, canvas) {
     var context2d = initCanvas(canvas, properties.w, properties.h);
     if (!context2d) {
+        document.getElementById("no-canvas").hidden = false;
         throw "2D canvas is not available";
     }
     var getKeys = installKeyListener(canvas);

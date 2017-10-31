@@ -10,8 +10,14 @@
       style="width: 512px; height: 512px"
       tabIndex="1"
     >
-      The game should be here. Perhaps JavaScript or &lt;canvas&gt; are turned off.
+      <span id="no-canvas"
+      >The game should be here. Perhaps JavaScript or &lt;canvas&gt; is
+      turned off.</span>
     </canvas>
+    <script>//<!--
+    document.getElementById("no-canvas").hidden = true;
+    document.getElementById("game").focus();
+    //--></script>
     <script src="table.js"></script>
     <script src="value.js"></script>
     <script src="keys.js"></script>
@@ -20,6 +26,5 @@
     <script src="interpreter.js"></script>
     <script src="example.js"></script>
     <script src="nifki.js"></script>
-    <script>document.getElementById("game").focus();</script>
   </body>
 </html>
