@@ -27,6 +27,9 @@
     <script src="/js/assembler.js"></script>
     <script src="/js/interpreter.js"></script>
     <script src="/js/nifki.js"></script>
-    <script>document.getElementById("game").focus();</script>
+    <script>
+      document.getElementById("game").focus();
+      window.addEventListener("DOMContentLoaded", function () { playGame("Rocks"); }, false);
+    </script>
   </body>
 </html>

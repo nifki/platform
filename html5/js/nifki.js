@@ -176,8 +176,8 @@ async function fetchBlob(url) {
     return await response.blob();
 }
 
-async function onPageLoad() {
-    const zipData = await fetchBlob("Rocks.jar");
+async function playGame(gameName) {
+    const zipData = await fetchBlob(`${gameName}.jar`);
     const gameData = await JSZip.loadAsync(zipData);
     const classPath = "org/sc3d/apt/crazon/gamedata/";
     const code = await gameData.files[classPath + "asm.nfk"].async("string");
@@ -204,5 +204,3 @@ async function onPageLoad() {
         canvas
     );
 }
-
-window.addEventListener("DOMContentLoaded", onPageLoad, false);
