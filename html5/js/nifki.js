@@ -201,13 +201,14 @@ async function onPageLoad() {
     const gameData = await JSZip.loadAsync(zipData);
     const classPath = "org/sc3d/apt/crazon/gamedata/";
     const code = await gameData.files[classPath + "asm.nfk"].async("string");
+    const imageList = (await gameData.files[classPath + "resources.txt"].async("string")).split("\n");
+    if (imageList[imageList.length - 1] === "") { imageList.pop(); }
     var canvas = document.getElementById("game");
     var width = +canvas.getAttribute("data-width");
     var height = +canvas.getAttribute("data-height");
     var msPerFrame = +canvas.getAttribute("data-msPerFrame");
-    var resources = canvas.getAttribute("data-resources").split(",");
     loadImagesThen(
-        resources,
+        imageList,
         function(images) {
             run(
                 assemble(code),
