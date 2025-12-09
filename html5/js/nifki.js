@@ -188,7 +188,19 @@ function loadImagesThen(imageFilenames, callback) {
     }
 }
 
-function onPageLoad() {
+async function fetchBlob(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Error fetching resource ${url}: ${response.status}`);
+    }
+    return await response.blob();
+}
+
+async function onPageLoad() {
+    const zipData = await fetchBlob("Rocks.jar");
+    const gameData = await JSZip.loadAsync(zipData);
+    const classPath = "org/sc3d/apt/crazon/gamedata/";
+    const code = await gameData.files[classPath + "asm.nfk"].async("string");
     var canvas = document.getElementById("game");
     var width = +canvas.getAttribute("data-width");
     var height = +canvas.getAttribute("data-height");
@@ -198,7 +210,7 @@ function onPageLoad() {
         resources,
         function(images) {
             run(
-                assemble(TEST_CODE),
+                assemble(code),
                 images,
                 {"w": width, "h": height, "msPerFrame": msPerFrame},
                 canvas
