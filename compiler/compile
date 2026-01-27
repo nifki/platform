@@ -2,6 +2,6 @@
 
 # Compiles all files in this package.
 
-javac -g -deprecation -d ~/java/classes/ *.java 2>/tmp/err || less /tmp/err
+javac -g -deprecation -d .. -classpath ../sss.jar:.. -Xlint:unchecked *.java ast/*.java 2>/tmp/err || less /tmp/err
 
-cp grammar.sss ~/java/classes/org/sc3d/apt/crazon/compiler/
+cp grammar.sss ../org/sc3d/apt/crazon/compiler/

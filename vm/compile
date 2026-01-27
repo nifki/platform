@@ -2,4 +2,4 @@
 
 # Compiles all files in this package.
 
-javac -source 1.3 -target 1.3 -g -deprecation -d ~/java/classes/ *.java 2>/tmp/err || less /tmp/err
+javac -g -deprecation -d .. -classpath ../sss.jar:.. *.java op/*.java platform/*.java state/*.java util/*.java 2>/tmp/err || less /tmp/err
